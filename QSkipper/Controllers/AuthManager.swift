@@ -10,6 +10,10 @@ import Foundation
 class AuthManager: ObservableObject {
     static let shared = AuthManager()
     
+    /// Feature flag: set to `true` to route auth through Supabase,
+    /// set to `false` to use the original REST backend (no-risk rollback).
+    static let useSupabase = true
+    
     private let networkManager = SimpleNetworkManager.shared
     private let userDefaultsManager = UserDefaultsManager.shared
     
@@ -30,6 +34,21 @@ class AuthManager: ObservableObject {
         
         defer { isLoading = false }
         
+        // --- Supabase path ---
+        if Self.useSupabase {
+            do {
+                try await SupabaseAuthService.shared.requestLoginOTP(email: email)
+                // Supabase sends OTP via email — not returned like legacy API
+                userDefaultsManager.savePartialUser(id: "", email: email, username: "")
+                print("✅ AuthManager (Supabase): Login OTP sent to \(email)")
+                return ""
+            } catch {
+                self.error = error.localizedDescription
+                throw error
+            }
+        }
+        
+        // --- Legacy path (original code) ---
         do {
             let loginRequest = LoginRequest(email: email)
             let jsonData = try JSONEncoder().encode(loginRequest)
@@ -85,6 +104,22 @@ class AuthManager: ObservableObject {
         
         defer { isLoading = false }
         
+        // --- Supabase path ---
+        if Self.useSupabase {
+            do {
+                let success = try await SupabaseAuthService.shared.verifyLoginOTP(email: email, otp: otp)
+                if success {
+                    self.isLoggedIn = true
+                    print("✅ AuthManager (Supabase): Login verified for \(email)")
+                }
+                return success
+            } catch {
+                self.error = error.localizedDescription
+                throw error
+            }
+        }
+        
+        // --- Legacy path (original code) ---
         do {
             let verificationRequest = OTPVerificationRequest(email: email, otp: otp)
             let jsonData = try JSONEncoder().encode(verificationRequest)
@@ -167,6 +202,20 @@ class AuthManager: ObservableObject {
         
         defer { isLoading = false }
         
+        // --- Supabase path ---
+        if Self.useSupabase {
+            do {
+                try await SupabaseAuthService.shared.register(email: email, username: name, phone: phone)
+                userDefaultsManager.savePartialUser(id: "", email: email, username: name)
+                print("✅ AuthManager (Supabase): Registration OTP sent to \(email)")
+                return "" // OTP is sent via email
+            } catch {
+                self.error = error.localizedDescription
+                throw error
+            }
+        }
+        
+        // --- Legacy path (original code) ---
         do {
             let registerRequest = RegisterRequest(email: email, name: name, phone: phone)
             let jsonData = try JSONEncoder().encode(registerRequest)
@@ -206,6 +255,22 @@ class AuthManager: ObservableObject {
         
         defer { isLoading = false }
         
+        // --- Supabase path ---
+        if Self.useSupabase {
+            do {
+                let success = try await SupabaseAuthService.shared.verifyRegister(email: email, otp: otp)
+                if success {
+                    self.isLoggedIn = true
+                    print("✅ AuthManager (Supabase): Registration verified for \(email)")
+                }
+                return success
+            } catch {
+                self.error = error.localizedDescription
+                throw error
+            }
+        }
+        
+        // --- Legacy path (original code) ---
         do {
             let verificationRequest = OTPVerificationRequest(email: email, otp: otp)
             let jsonData = try JSONEncoder().encode(verificationRequest)
@@ -265,6 +330,14 @@ class AuthManager: ObservableObject {
     // Logout user
     @MainActor
     func logout() {
+        // --- Supabase path ---
+        if Self.useSupabase {
+            Task {
+                await SupabaseAuthService.shared.logout()
+                print("✅ AuthManager (Supabase): Logged out")
+            }
+        }
+        // Always clear local state (both paths)
         userDefaultsManager.clearUserData()
         isLoggedIn = false
     }

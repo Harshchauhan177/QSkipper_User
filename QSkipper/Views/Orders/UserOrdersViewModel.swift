@@ -48,7 +48,7 @@ class UserOrdersViewModel: ObservableObject {
         isLoading = true
         errorMessage = nil
         
-        guard let userId = AuthManager.shared.getCurrentUserId() else {
+        guard let rawUserId = AuthManager.shared.getCurrentUserId() else {
             print("🚫 No user ID found")
             DispatchQueue.main.async {
                 self.isLoading = false
@@ -56,15 +56,25 @@ class UserOrdersViewModel: ObservableObject {
             }
             return
         }
+        // Supabase uses lowercase UUIDs
+        let userId = AuthManager.useSupabase ? rawUserId.lowercased() : rawUserId
         
         // Use Task for better async handling
         Task {
             do {
                 // First fetch all restaurants to have the data available
-                try await fetchAllRestaurants()
+                if !AuthManager.useSupabase {
+                    try await fetchAllRestaurants()
+                }
                 
                 // Now fetch the orders
-                let orders = try await fetchUserOrdersAPI(userId: userId)
+                let orders: [UserOrder]
+                // --- Supabase path ---
+                if AuthManager.useSupabase {
+                    orders = try await SupabaseOrderService.shared.fetchUserOrders(userId: userId)
+                } else {
+                    orders = try await fetchUserOrdersAPI(userId: userId)
+                }
                 
                 // Process orders on the main thread
                 await MainActor.run {

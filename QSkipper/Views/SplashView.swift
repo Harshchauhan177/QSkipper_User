@@ -170,7 +170,12 @@ class PreloadManager: ObservableObject {
                     await MainActor.run {
                         print("🔄 PreloadManager: Preloading restaurants")
                     }
-                    let fetchedRestaurants = try await self.networkUtils.fetchRestaurants()
+                    let fetchedRestaurants: [Restaurant]
+                    if AuthManager.useSupabase {
+                        fetchedRestaurants = try await SupabaseRestaurantService.shared.fetchAllRestaurants()
+                    } else {
+                        fetchedRestaurants = try await self.networkUtils.fetchRestaurants()
+                    }
                     await MainActor.run {
                         self.restaurants = fetchedRestaurants
                         print("✅ PreloadManager: Preloaded \(fetchedRestaurants.count) restaurants")
@@ -189,7 +194,12 @@ class PreloadManager: ObservableObject {
                     await MainActor.run {
                         print("🔄 PreloadManager: Preloading top picks")
                     }
-                    let fetchedTopPicks = try await self.networkUtils.fetchTopPicks()
+                    let fetchedTopPicks: [Product]
+                    if AuthManager.useSupabase {
+                        fetchedTopPicks = try await SupabaseRestaurantService.shared.fetchTopPicks()
+                    } else {
+                        fetchedTopPicks = try await self.networkUtils.fetchTopPicks()
+                    }
                     await MainActor.run {
                         self.topPicks = fetchedTopPicks
                         print("✅ PreloadManager: Preloaded \(fetchedTopPicks.count) top picks")

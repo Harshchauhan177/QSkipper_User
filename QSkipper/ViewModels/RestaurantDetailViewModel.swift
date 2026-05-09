@@ -111,7 +111,13 @@ class RestaurantDetailViewModel: ObservableObject {
         Task {
             do {
                 print("📡 RESTAURANT DETAIL: Calling networkUtils.fetchProducts")
-                var fetchedProducts = try await networkUtils.fetchProducts(for: restaurantId)
+                var fetchedProducts: [Product]
+                // --- Supabase path ---
+                if AuthManager.useSupabase {
+                    fetchedProducts = try await SupabaseRestaurantService.shared.fetchProducts(for: restaurantId)
+                } else {
+                    fetchedProducts = try await networkUtils.fetchProducts(for: restaurantId)
+                }
                 
                 // Debug: Print all products before fixing
                 print("📋 RESTAURANT DETAIL: Fetched \(fetchedProducts.count) products:")

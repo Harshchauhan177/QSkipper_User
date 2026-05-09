@@ -261,7 +261,12 @@ class HomeViewModel: ObservableObject {
             
             while retryCount < maxRetries {
                 do {
-                    fetchedRestaurants = try await restaurantManager.fetchAllRestaurants()
+                    // --- Supabase path ---
+                    if AuthManager.useSupabase {
+                        fetchedRestaurants = try await SupabaseRestaurantService.shared.fetchAllRestaurants()
+                    } else {
+                        fetchedRestaurants = try await restaurantManager.fetchAllRestaurants()
+                    }
                     
                     // Success, exit retry loop
                     print("✅ Successfully loaded \(fetchedRestaurants.count) restaurants on attempt \(retryCount + 1)")
@@ -400,7 +405,12 @@ class HomeViewModel: ObservableObject {
             
             while retryCount < maxRetries {
                 do {
-                    fetchedTopPicks = try await networkUtils.fetchTopPicks()
+                    // --- Supabase path ---
+                    if AuthManager.useSupabase {
+                        fetchedTopPicks = try await SupabaseRestaurantService.shared.fetchTopPicks()
+                    } else {
+                        fetchedTopPicks = try await networkUtils.fetchTopPicks()
+                    }
                     
                     // Success, exit retry loop
                     print("✅ Successfully loaded \(fetchedTopPicks.count) top picks on attempt \(retryCount + 1)")

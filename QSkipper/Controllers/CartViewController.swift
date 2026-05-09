@@ -57,7 +57,31 @@ class CartViewController: ObservableObject, RazorpayPaymentCompletionProtocol {
             
             if self.restaurant == nil {
                 print("Restaurant not found in RestaurantManager for ID: \(restaurantId), attempting to fetch")
-                if RestaurantManager.shared.restaurants.isEmpty {
+                // --- Supabase path ---
+                if AuthManager.useSupabase {
+                    Task {
+                        do {
+                            let fetched = try await SupabaseRestaurantService.shared.fetchRestaurant(id: restaurantId)
+                            await MainActor.run {
+                                self.restaurant = fetched
+                                print("✅ Found restaurant via Supabase: \(fetched.name)")
+                            }
+                        } catch {
+                            await MainActor.run {
+                                print("⚠️ Could not fetch restaurant from Supabase, creating default")
+                                self.restaurant = Restaurant(
+                                    id: restaurantId,
+                                    name: "Restaurant",
+                                    estimatedTime: "30-40",
+                                    cuisine: nil,
+                                    photoId: nil,
+                                    rating: 4.0,
+                                    location: "Campus Area"
+                                )
+                            }
+                        }
+                    }
+                } else if RestaurantManager.shared.restaurants.isEmpty {
                     Task {
                         try? await RestaurantManager.shared.fetchAllRestaurants()
                         await MainActor.run {
@@ -103,7 +127,7 @@ class CartViewController: ObservableObject, RazorpayPaymentCompletionProtocol {
             print("🔄 CartViewController: Starting place order process...")
             self.isProcessing = true
             
-            guard let userId = UserDefaultsManager.shared.getUserId() else {
+            guard let rawUserId = UserDefaultsManager.shared.getUserId() else {
                 print("❌ CartViewController: Failed to get user ID for order")
                 print("📱 Current UserDefaults state:")
                 print("   - User ID: \(UserDefaultsManager.shared.getUserId() ?? "nil")")
@@ -113,6 +137,8 @@ class CartViewController: ObservableObject, RazorpayPaymentCompletionProtocol {
                 self.isProcessing = false
                 return
             }
+            // Supabase uses lowercase UUIDs; UserDefaults may have uppercase from Swift's uuidString
+            let userId = AuthManager.useSupabase ? rawUserId.lowercased() : rawUserId
             print("✅ CartViewController: User ID found: \(userId)")
             
             guard let firstItem = orderManager.currentCart.first else {
@@ -210,19 +236,64 @@ class CartViewController: ObservableObject, RazorpayPaymentCompletionProtocol {
         
         do {
             let orderId: String
-            if isSchedulingOrder {
-                orderId = try await OrderAPIService.shared.placeScheduledOrder(jsonDict: jsonDict)
+
+            // --- Supabase path (COD flow: place → verify → done) ---
+            if AuthManager.useSupabase {
+                let items = jsonDict["items"] as? [[String: Any]] ?? []
+                let price = jsonDict["price"] as? String ?? "0"
+                let takeAway = jsonDict["takeAway"] as? Bool ?? false
+                let userId = jsonDict["userId"] as? String ?? ""
+                let restaurantId = jsonDict["restaurantId"] as? String ?? ""
+
+                if isSchedulingOrder {
+                    let scheduleDate = jsonDict["scheduleDate"] as? String ?? ""
+                    let response = try await SupabaseOrderService.shared.placeScheduledOrder(
+                        restaurantId: restaurantId,
+                        userId: userId,
+                        items: items,
+                        price: price,
+                        scheduleDate: scheduleDate
+                    )
+                    orderId = response.orderId ?? ""
+                } else {
+                    let response = try await SupabaseOrderService.shared.placeOrder(
+                        restaurantId: restaurantId,
+                        userId: userId,
+                        items: items,
+                        price: price,
+                        takeAway: takeAway
+                    )
+                    orderId = response.orderId ?? ""
+                }
+
+                // COD: Immediately verify the order (no payment gateway)
+                try await SupabaseOrderService.shared.verifyOrder(orderId: orderId)
+
+                print("✅ CartViewController (Supabase COD): Order placed & verified — \(orderId)")
+
+                await MainActor.run {
+                    self.orderId = orderId
+                    self.isProcessing = false
+                    self.showOrderSuccess = true
+                    // Clear cart after successful order
+                    self.orderManager.clearCart()
+                }
             } else {
-                orderId = try await OrderAPIService.shared.placeOrder(jsonDict: jsonDict)
-            }
-            
-            print("✅ CartViewController: Order API call successful!")
-            print("   - Order ID: \(orderId)")
-            
-            await MainActor.run {
-                self.orderId = orderId
-                self.showPaymentView = true
-                self.initiateRazorpayPayment(orderId: orderId, amount: getTotalAmount())
+                // --- Legacy path (Razorpay flow) ---
+                if isSchedulingOrder {
+                    orderId = try await OrderAPIService.shared.placeScheduledOrder(jsonDict: jsonDict)
+                } else {
+                    orderId = try await OrderAPIService.shared.placeOrder(jsonDict: jsonDict)
+                }
+                
+                print("✅ CartViewController: Order API call successful!")
+                print("   - Order ID: \(orderId)")
+                
+                await MainActor.run {
+                    self.orderId = orderId
+                    self.showPaymentView = true
+                    self.initiateRazorpayPayment(orderId: orderId, amount: getTotalAmount())
+                }
             }
         } catch {
             print("❌ CartViewController: Order API Error: \(error.localizedDescription)")

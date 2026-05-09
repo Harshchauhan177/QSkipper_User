@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		23C6D3B12FAFA919000CAD94 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = 23C6D3B02FAFA919000CAD94 /* Auth */; };
+		23C6D3B32FAFA919000CAD94 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = 23C6D3B22FAFA919000CAD94 /* Functions */; };
+		23C6D3B52FAFA919000CAD94 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = 23C6D3B42FAFA919000CAD94 /* PostgREST */; };
+		23C6D3B72FAFA919000CAD94 /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = 23C6D3B62FAFA919000CAD94 /* Realtime */; };
+		23C6D3B92FAFA919000CAD94 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = 23C6D3B82FAFA919000CAD94 /* Storage */; };
+		23C6D3BC2FAFACC0000CAD94 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 23C6D3BB2FAFACC0000CAD94 /* Supabase */; };
 		7299C66F2DA85B1F007D6AD3 /* RazorpayCheckout in Frameworks */ = {isa = PBXBuildFile; productRef = 7299C66E2DA85B1F007D6AD3 /* RazorpayCheckout */; };
 		7299C6722DA85DA4007D6AD3 /* Razorpay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7299C6712DA85DA4007D6AD3 /* Razorpay.swift */; };
 /* End PBXBuildFile section */
@@ -42,6 +48,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				23C6D3BC2FAFACC0000CAD94 /* Supabase in Frameworks */,
+				23C6D3B92FAFA919000CAD94 /* Storage in Frameworks */,
+				23C6D3B52FAFA919000CAD94 /* PostgREST in Frameworks */,
+				23C6D3B32FAFA919000CAD94 /* Functions in Frameworks */,
+				23C6D3B12FAFA919000CAD94 /* Auth in Frameworks */,
+				23C6D3B72FAFA919000CAD94 /* Realtime in Frameworks */,
 				7299C66F2DA85B1F007D6AD3 /* RazorpayCheckout in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -49,11 +61,19 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		23C6D3BA2FAFACC0000CAD94 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		898C08742D951976001043AF = {
 			isa = PBXGroup;
 			children = (
 				7299C6712DA85DA4007D6AD3 /* Razorpay.swift */,
 				898C087F2D951976001043AF /* QSkipper */,
+				23C6D3BA2FAFACC0000CAD94 /* Frameworks */,
 				898C087E2D951976001043AF /* Products */,
 			);
 			sourceTree = "<group>";
@@ -87,6 +107,12 @@
 			name = QSkipper;
 			packageProductDependencies = (
 				7299C66E2DA85B1F007D6AD3 /* RazorpayCheckout */,
+				23C6D3B02FAFA919000CAD94 /* Auth */,
+				23C6D3B22FAFA919000CAD94 /* Functions */,
+				23C6D3B42FAFA919000CAD94 /* PostgREST */,
+				23C6D3B62FAFA919000CAD94 /* Realtime */,
+				23C6D3B82FAFA919000CAD94 /* Storage */,
+				23C6D3BB2FAFACC0000CAD94 /* Supabase */,
 			);
 			productName = QSkipper;
 			productReference = 898C087D2D951976001043AF /* QSkipper.app */;
@@ -118,6 +144,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				7299C66D2DA85B1F007D6AD3 /* XCRemoteSwiftPackageReference "razorpay-pod" */,
+				23C6D3AF2FAFA919000CAD94 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 898C087E2D951976001043AF /* Products */;
@@ -360,6 +387,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		23C6D3AF2FAFA919000CAD94 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+		};
 		7299C66D2DA85B1F007D6AD3 /* XCRemoteSwiftPackageReference "razorpay-pod" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/razorpay/razorpay-pod.git";
@@ -371,6 +406,36 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		23C6D3B02FAFA919000CAD94 /* Auth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 23C6D3AF2FAFA919000CAD94 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Auth;
+		};
+		23C6D3B22FAFA919000CAD94 /* Functions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 23C6D3AF2FAFA919000CAD94 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Functions;
+		};
+		23C6D3B42FAFA919000CAD94 /* PostgREST */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 23C6D3AF2FAFA919000CAD94 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = PostgREST;
+		};
+		23C6D3B62FAFA919000CAD94 /* Realtime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 23C6D3AF2FAFA919000CAD94 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Realtime;
+		};
+		23C6D3B82FAFA919000CAD94 /* Storage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 23C6D3AF2FAFA919000CAD94 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Storage;
+		};
+		23C6D3BB2FAFACC0000CAD94 /* Supabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 23C6D3AF2FAFA919000CAD94 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Supabase;
+		};
 		7299C66E2DA85B1F007D6AD3 /* RazorpayCheckout */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 7299C66D2DA85B1F007D6AD3 /* XCRemoteSwiftPackageReference "razorpay-pod" */;
