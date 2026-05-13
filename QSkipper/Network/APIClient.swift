@@ -386,6 +386,30 @@ class APIClient {
         
         // First try loading from the original URL
         do {
+            // If the URL points to an external host (e.g. Supabase Storage),
+            // fetch it directly instead of rotating through old backend servers.
+            let isExternalURL: Bool = {
+                guard let host = url.host else { return false }
+                let knownHosts = alternateServers.compactMap { URL(string: $0)?.host }
+                return !knownHosts.contains(host)
+            }()
+            
+            if isExternalURL {
+                do {
+                    print("🔄 Loading image directly from external URL: \(urlString.prefix(80))...")
+                    let (data, response) = try await URLSession.shared.data(from: url)
+                    
+                    if let httpResponse = response as? HTTPURLResponse,
+                       (200...299).contains(httpResponse.statusCode),
+                       let image = UIImage(data: data) {
+                        imageCache.setImage(image, forKey: urlString)
+                        return image
+                    }
+                } catch {
+                    print("⚠️ External URL failed: \(error.localizedDescription)")
+                }
+            }
+            
             // Loop through each server to try
             for (index, serverBase) in alternateServers.enumerated() {
                 // Skip if this is a retry and we're on the first server (already tried)

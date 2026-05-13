@@ -111,20 +111,28 @@ class NetworkUtils {
     func fetchRestaurantImage(photoId: String) async throws -> UIImage {
         // Check image cache first
         if let cachedImage = ImageCache.shared.getImage(forKey: "restaurant_\(photoId)") {
-            print("✅ Using cached restaurant image for ID: \(photoId)")
+            print("✅ Using cached restaurant image for ID: \(photoId.prefix(60))...")
             return cachedImage
         }
         
         // Delegate to APIClient for image loading with user-initiated priority
-        print("📡 NetworkUtils: Delegating fetchRestaurantImage to APIClient for ID: \(photoId)")
+        print("📡 NetworkUtils: Loading restaurant image for: \(photoId.prefix(80))...")
         
         do {
-            let urlString = "\(baseURl.absoluteString)get_restaurant_photo/\(photoId)"
+            // If photoId is already a full URL (from Supabase Storage), use it directly
+            let urlString: String
+            if photoId.hasPrefix("http") {
+                urlString = photoId
+            } else if let imageURL = SupabaseRestaurantService.shared.restaurantImageURL(photoId: photoId) {
+                urlString = imageURL.absoluteString
+            } else {
+                throw NetworkUtilsError.ImageNotFound
+            }
             
             // Use a higher priority task but await its result directly
             let image = try await APIClient.shared.loadImage(from: urlString)
             
-            // Cache the image to maintain compatibility with old code 
+            // Cache the image
             ImageCache.shared.setImage(image, forKey: "restaurant_\(photoId)")
             
             return image
@@ -244,17 +252,26 @@ class NetworkUtils {
     func fetchProductImage(photoId: String) async throws -> UIImage {
         // Check image cache first
         if let cachedImage = ImageCache.shared.getImage(forKey: "product_\(photoId)") {
-            print("✅ Using cached product image for ID: \(photoId)")
+            print("✅ Using cached product image for ID: \(photoId.prefix(60))...")
             return cachedImage
         }
         
-        print("📡 NetworkUtils: Delegating fetchProductImage to APIClient for ID: \(photoId)")
+        print("📡 NetworkUtils: Loading product image for: \(photoId.prefix(80))...")
         
         do {
-            let urlString = "\(baseURl.absoluteString)get_product_photo/\(photoId)"
+            // If photoId is already a full URL (from Supabase Storage), use it directly
+            let urlString: String
+            if photoId.hasPrefix("http") {
+                urlString = photoId
+            } else if let imageURL = SupabaseRestaurantService.shared.productImageURL(photoId: photoId) {
+                urlString = imageURL.absoluteString
+            } else {
+                throw NetworkUtilsError.ImageNotFound
+            }
+            
             let image = try await APIClient.shared.loadImage(from: urlString)
             
-            // Cache the image to maintain compatibility with old code
+            // Cache the image
             ImageCache.shared.setImage(image, forKey: "product_\(photoId)")
             
             return image
@@ -891,29 +908,23 @@ class NetworkManager {
     }
 }
 
-// Helper for creating image URLs
+// Helper for creating image URLs — now uses Supabase Storage
 extension NetworkUtils {
     static func getImageUrl(id: Int) -> URL? {
-        return URL(string: "\(NetworkUtilsEndpoints.baseURL)/get_restaurant_photo/\(id)")
+        return SupabaseRestaurantService.shared.restaurantImageURL(photoId: String(id))
     }
     
     static func getProductImageUrl(id: Int) -> URL? {
-        return URL(string: "\(NetworkUtilsEndpoints.baseURL)/get_product_photo/\(id)")
+        return SupabaseRestaurantService.shared.productImageURL(photoId: String(id))
     }
     
     // Add more flexible methods that can handle both String and Int photoIds
     static func getImageUrl(photoId: String) -> URL? {
-        if let id = Int(photoId) {
-            return getImageUrl(id: id)
-        }
-        return URL(string: "\(NetworkUtilsEndpoints.baseURL)/get_restaurant_photo/\(photoId)")
+        return SupabaseRestaurantService.shared.restaurantImageURL(photoId: photoId)
     }
     
     static func getProductImageUrl(photoId: String) -> URL? {
-        if let id = Int(photoId) {
-            return getProductImageUrl(id: id)
-        }
-        return URL(string: "\(NetworkUtilsEndpoints.baseURL)/get_product_photo/\(photoId)")
+        return SupabaseRestaurantService.shared.productImageURL(photoId: photoId)
     }
     
     // Parse API responses to get detailed error messages

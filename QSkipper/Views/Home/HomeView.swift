@@ -596,14 +596,12 @@ struct HomeView: View {
     // Increase minimum refresh interval to prevent excessive refreshes
     private let minRefreshInterval: TimeInterval = 60 // 60 seconds between refreshes
     
-    // Initializer to set initial loading states
+    // Initializer
     init() {
-        let viewModel = HomeViewModel()
-        viewModel.isLoading = true
-        viewModel.isLoadingTopPicks = true
-        
-        // Use underscore to set the StateObject's wrapped value directly
-        self._viewModel = StateObject(wrappedValue: viewModel)
+        // Note: Don't pre-set isLoading/isLoadingTopPicks here — they serve as
+        // re-entrancy guards in loadRestaurants()/loadTopPicks() and pre-setting
+        // them prevents the actual fetch from starting.
+        self._viewModel = StateObject(wrappedValue: HomeViewModel())
     }
     
     var filteredRestaurants: [Restaurant] {
@@ -631,10 +629,8 @@ struct HomeView: View {
                     homeContent
                         .navigationBarHidden(true)
                         .onAppear {
-                            // Set loading indicators and start data fetch on first appearance
+                            // Start data fetch on first appearance
                             if !initialLoadStarted {
-                                viewModel.isLoading = true
-                                viewModel.isLoadingTopPicks = true
                                 initialLoadStarted = true
                                 loadData()
                             }
@@ -729,7 +725,12 @@ struct HomeView: View {
             print("📱 HomeView: Current tab: \(selectedTab)")
             print("🛒 HomeView: Cart sheet state: \(showCartSheet)")
             
-            loadData()
+            // Only trigger a refresh if initial load already happened but data is empty
+            // (e.g., coming back to the tab after an error). The initial load is
+            // handled by homeContent.onAppear to avoid duplicate calls.
+            if initialLoadStarted && viewModel.restaurants.isEmpty && !viewModel.isLoading {
+                loadData()
+            }
             
             // Add notification observer for cart opening
             print("🔔 HomeView: Setting up OpenCart notification observer")
@@ -816,20 +817,17 @@ struct HomeView: View {
             if currentTime - lastRefreshActionTime < minRefreshInterval {
                 print("⏱️ Refresh action debounced - too soon since last refresh (\(Int(currentTime - lastRefreshActionTime))s). Need to wait \(Int(minRefreshInterval - (currentTime - lastRefreshActionTime)))s more.")
                 
-                // Still set loading to false to avoid UI getting stuck
+                // Don't reset isLoading/isLoadingTopPicks here — another loadData() call
+                // may still be actively fetching data. Only reset pull-to-refresh state.
                 await MainActor.run {
-                    viewModel.isLoading = false
-                    viewModel.isLoadingTopPicks = false
                     isPullingToRefresh = false
                 }
                 return
             }
             
-            // Set loading indicators only after debounce check
-            await MainActor.run {
-                viewModel.isLoading = true
-                viewModel.isLoadingTopPicks = true
-            }
+            // Note: Don't set isLoading/isLoadingTopPicks here — the individual
+            // load methods (loadRestaurants/loadTopPicks) manage their own flags.
+            // Pre-setting them causes those methods to skip the actual fetch.
             
             // Update the last refresh time BEFORE making any API calls
             await MainActor.run {
@@ -1061,13 +1059,13 @@ struct HomeView: View {
                     topPicksSection
                       .onAppear {
                           print("📱 Top picks section appeared")
-                          // Only refresh if absolutely necessary - when completely empty
-                          if viewModel.topPicks.isEmpty && !viewModel.isLoadingTopPicks && 
+                          // Only refresh if initial load is already done, data is empty,
+                          // and enough time has passed. Don't update lastRefreshActionTime
+                          // here to avoid racing with the main loadData() debounce.
+                          if initialLoadStarted && viewModel.topPicks.isEmpty && !viewModel.isLoadingTopPicks && 
                              Date().timeIntervalSince1970 - lastRefreshActionTime > minRefreshInterval {
                               Task {
                                   print("🔄 Refreshing top picks from onAppear (empty data)")
-                                  // Update refresh time before making the call to prevent simultaneous requests
-                                  lastRefreshActionTime = Date().timeIntervalSince1970
                                   await viewModel.loadTopPicks()
                               }
                           } else {

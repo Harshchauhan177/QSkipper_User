@@ -80,10 +80,10 @@ struct RestaurantImageLoader: View {
         
         isLoading = true
         
-        // Use NetworkUtils to get restaurant details and image with user-initiated priority
+        // Use SupabaseRestaurantService to get restaurant details and image
         Task(priority: .userInitiated) {
             do {
-                let fetchedRestaurant = try await NetworkUtils.shared.fetchRestaurant(with: restaurantId)
+                let fetchedRestaurant = try await SupabaseRestaurantService.shared.fetchRestaurant(id: restaurantId)
                 await MainActor.run {
                     self.restaurant = fetchedRestaurant
                     

@@ -143,12 +143,15 @@ private struct SBRestaurantRow: Codable {
     ///   init(id: String, name: String, estimatedTime: String?,
     ///        cuisine: String?, photoId: String?, rating: Double, location: String)
     func toRestaurant() -> Restaurant {
-        Restaurant(
+        // Prefer the full Supabase Storage URL stored in banner_image_url,
+        // fall back to photo_id (UUID), then restaurant id
+        let effectivePhotoId = banner_image_url ?? photo_id ?? id
+        return Restaurant(
             id:            id,
             name:          name,
             estimatedTime: estimated_time != nil ? String(estimated_time!) : "30-40",
             cuisine:       cuisine ?? "Various",
-            photoId:       photo_id ?? id,
+            photoId:       effectivePhotoId,
             rating:        rating ?? 4.0,
             location:      location ?? "🏫 Campus Cafeteria"
         )
@@ -200,7 +203,10 @@ private struct SBProductRow: Codable {
     ///        restaurantId: String, category: String?, isAvailable: Bool,
     ///        rating: Double, extraTime: Int?, photoId: String?, isVeg: Bool)
     func toProduct() -> Product {
-        Product(
+        // Prefer the full Supabase Storage URL stored in image_url,
+        // fall back to photo_id (UUID), then product id
+        let effectivePhotoId = image_url ?? photo_id ?? id
+        return Product(
             id:           id,
             name:         name,
             description:  description,
@@ -210,7 +216,7 @@ private struct SBProductRow: Codable {
             isAvailable:  is_available ?? true,
             rating:       rating ?? 4.0,
             extraTime:    extra_time,
-            photoId:      photo_id ?? id,
+            photoId:      effectivePhotoId,
             isVeg:        is_veg ?? true
         )
     }
