@@ -185,11 +185,11 @@ class SupabaseAuthService: ObservableObject {
             .value
 
         // Extract username and phone from metadata
-        let metaUsername = (authUser.userMetadata["username"] as? AnyJSON).flatMap { val -> String? in
+        let metaUsername = authUser.userMetadata["username"].flatMap { val -> String? in
             if case .string(let s) = val { return s }
             return nil
         }
-        let metaPhone = (authUser.userMetadata["phone"] as? AnyJSON).flatMap { val -> String? in
+        let metaPhone = authUser.userMetadata["phone"].flatMap { val -> String? in
             if case .string(let s) = val { return s }
             return nil
         }

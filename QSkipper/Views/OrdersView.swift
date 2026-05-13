@@ -106,21 +106,16 @@ class OrdersViewModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         
-        do {
-            // Here you would make the API call to fetch orders
-            // For now, we'll just print that we're ready to fetch
-            print("🔄 Ready to fetch orders from API")
-            print("GET \(ServerConfig.primaryBaseURL)/orders")
-            
-            // Get auth token from UserDefaults
-            if let userId = UserDefaultsManager.shared.getUserId() {
-                print("📱 Fetching orders for user: \(userId)")
-            } else {
-                print("❌ No user ID found")
-            }
-        } catch {
-            self.error = error
-            print("❌ Error fetching orders: \(error)")
+        // Here you would make the API call to fetch orders
+        // For now, we'll just print that we're ready to fetch
+        print("🔄 Ready to fetch orders from API")
+        print("GET \(ServerConfig.primaryBaseURL)/orders")
+        
+        // Get auth token from UserDefaults
+        if let userId = UserDefaultsManager.shared.getUserId() {
+            print("📱 Fetching orders for user: \(userId)")
+        } else {
+            print("❌ No user ID found")
         }
     }
 } 

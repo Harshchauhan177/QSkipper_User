@@ -39,7 +39,7 @@ class KeychainManager {
     /// - Returns: A boolean indicating success or failure
     func saveData(_ data: Data, forKey key: String) -> Bool {
         // First, attempt to delete any existing item
-        deleteItem(forKey: key)
+        _ = deleteItem(forKey: key)
         
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,

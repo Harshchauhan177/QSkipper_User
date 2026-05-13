@@ -278,9 +278,7 @@ class StoreKitManager: ObservableObject {
         
         print("🔄 StoreKitManager: Simulating successful purchase for: \(product.displayName)")
         // Mimic a successful transaction without showing the payment sheet
-        await MainActor.run {
-            purchasedProductIdentifiers.insert(productID)
-        }
+        purchasedProductIdentifiers.insert(productID)
         print("✅ StoreKitManager: Simulated purchase complete")
     }
 

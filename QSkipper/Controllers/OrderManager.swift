@@ -11,10 +11,17 @@ import Combine
 
 // CartItem represents a product in the cart with its quantity
 struct CartItem: Identifiable, Codable {
-    let id = UUID()
+    let id: UUID
     let productId: String
     let product: Product
     var quantity: Int
+    
+    init(productId: String, product: Product, quantity: Int) {
+        self.id = UUID()
+        self.productId = productId
+        self.product = product
+        self.quantity = quantity
+    }
     
     // Total price for this cart item (quantity * product price)
     var totalPrice: Double {
@@ -358,8 +365,8 @@ class OrderManager: ObservableObject {
             if response.status == "success", let orderStatus = response.orderStatus {
                 // Update order status in local orders list
                 if let index = orders.firstIndex(where: { $0.id == orderId }) {
-                    var updatedOrder = orders[index]
-                    DispatchQueue.main.async {
+                    let updatedOrder = orders[index]
+                    DispatchQueue.main.async { [self] in
                         self.orders[index] = updatedOrder
                     }
                 }

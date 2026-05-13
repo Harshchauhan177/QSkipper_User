@@ -277,7 +277,7 @@ struct OrderItemCard: View {
                         restaurantName = restaurant.name
                     } else {
                         // Try to fetch restaurants if not available
-                        try await RestaurantManager.shared.fetchAllRestaurants()
+                        _ = try await RestaurantManager.shared.fetchAllRestaurants()
                         if let restaurant = RestaurantManager.shared.getRestaurant(by: order.restaurantId) {
                             restaurantName = restaurant.name
                         }
@@ -488,7 +488,7 @@ class MyOrdersViewModel: ObservableObject {
                             // Update order status in the orders array
                             await MainActor.run {
                                 if let index = self.orders.firstIndex(where: { $0.id == orderId }) {
-                                    var updatedOrder = self.orders[index]
+                                    let updatedOrder = self.orders[index]
                                     // We would need to create a new Order object since it's immutable
                                     // This is a simplification - in a real app we might have more fields to update
                                     let newOrder = Order(

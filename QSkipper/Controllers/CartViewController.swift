@@ -83,7 +83,7 @@ class CartViewController: ObservableObject, RazorpayPaymentCompletionProtocol {
                     }
                 } else if RestaurantManager.shared.restaurants.isEmpty {
                     Task {
-                        try? await RestaurantManager.shared.fetchAllRestaurants()
+                        _ = try? await RestaurantManager.shared.fetchAllRestaurants()
                         await MainActor.run {
                             self.restaurant = RestaurantManager.shared.getRestaurant(by: restaurantId)
                             if self.restaurant == nil {
@@ -191,7 +191,7 @@ class CartViewController: ObservableObject, RazorpayPaymentCompletionProtocol {
     
     private func submitOrderToAPI(orderRequest: PlaceOrderRequest) async throws {
         let priceString = String(format: "%.0f", getTotalAmount())
-        let apiEndpoint = isSchedulingOrder ? "/schedule-order-placed" : "/order-placed"
+        // let apiEndpoint = isSchedulingOrder ? "/schedule-order-placed" : "/order-placed"
         
         print("📤 CartViewController: Submitting order to \(isSchedulingOrder ? "schedule-order-placed" : "order-placed") API")
         
@@ -464,7 +464,7 @@ class CartViewController: ObservableObject, RazorpayPaymentCompletionProtocol {
                 do {
                     // Try to cancel the order, but don't block the UI flow
                     // This is a best effort to clean up the backend
-                    try await APIClient.shared.cancelOrder(orderId: orderId)
+                    _ = try await APIClient.shared.cancelOrder(orderId: orderId)
                     print("✅ CartViewController: Order \(orderId) cancelled successfully after payment failure")
                 } catch {
                     // Even if this fails, we still want to show the failure UI

@@ -208,8 +208,8 @@ struct RestaurantImageView: View {
         isLoading = true
         
         Task {
-            await Task.sleep(UInt64(0.5 * 1_000_000_000))
-            await loadImage(forceRetry: true)
+            try? await Task.sleep(nanoseconds: UInt64(0.5 * 1_000_000_000))
+            loadImage(forceRetry: true)
         }
     }
     
@@ -430,8 +430,8 @@ struct ProductImageView: View {
         isLoading = true
         
         Task {
-            await Task.sleep(UInt64(0.5 * 1_000_000_000))
-            await loadImage(forceRetry: true)
+            try? await Task.sleep(nanoseconds: UInt64(0.5 * 1_000_000_000))
+            loadImage(forceRetry: true)
         }
     }
     

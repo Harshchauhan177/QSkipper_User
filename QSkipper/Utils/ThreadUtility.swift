@@ -68,7 +68,7 @@ extension UIApplication {
     static func presentSafely(_ viewController: UIViewController, animated: Bool = true, completion: (() -> Void)? = nil) {
         ThreadUtility.ensureMainThread {
             Task { @MainActor in
-                guard let rootVC = await UIApplication.getRootViewController() else {
+                guard let rootVC = UIApplication.getRootViewController() else {
                     print("⚠️ No root view controller found for presentation")
                     return
                 }

@@ -122,7 +122,7 @@ struct OTPVerificationView: View {
                             .focused($focusedField, equals: 0)
                             .opacity(0.01)
                             .frame(maxWidth: .infinity)
-                            .onChange(of: directOTPInput) { newValue in
+                            .onChange(of: directOTPInput) { oldValue, newValue in
                                 // Only allow up to 6 digits
                                 if newValue.count > 6 {
                                     directOTPInput = String(newValue.prefix(6))

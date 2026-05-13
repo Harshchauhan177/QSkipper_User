@@ -185,8 +185,8 @@ class HomeViewModel: ObservableObject {
                             let restaurant = try await networkUtils.fetchRestaurant(with: id)
                             await MainActor.run {
                                 restaurantDetailsCache[id] = restaurant
-                                success = true
                             }
+                            success = true
                         } catch {
                             retryCount += 1
                             if retryCount >= maxRetries {
@@ -207,13 +207,11 @@ class HomeViewModel: ObservableObject {
                     // Add a small delay between requests
                     try? await Task.sleep(nanoseconds: 300_000_000) // 300ms
                 }
-            } catch {
-                print("⚠️ Failed to fetch restaurant \(id): \(error.localizedDescription)")
             }
             
             // Remove from pending regardless of success/failure - on main actor
             await MainActor.run {
-                pendingRestaurantRequests.remove(id)
+                _ = pendingRestaurantRequests.remove(id)
             }
         }
     }
@@ -251,8 +249,8 @@ class HomeViewModel: ObservableObject {
         // Store current data for rollback if needed
         let previousRestaurants = self.restaurants
         
-        do {
-            print("📡 HomeViewModel: Loading restaurants...")
+        // Load restaurants with retry logic
+        print("📡 HomeViewModel: Loading restaurants...")
             
             // Try with retries for reliability
             var retryCount = 0
@@ -323,23 +321,7 @@ class HomeViewModel: ObservableObject {
             }
             
             isLoading = false
-        } catch {
-            print("❌ Error loading restaurants: \(error.localizedDescription)")
-            
-            if error.localizedDescription.contains("offline") || 
-               error.localizedDescription.contains("network connection") ||
-               error.localizedDescription.contains("The Internet connection appears to be offline") {
-                errorMessage = "No internet connection. Please check your connection and try again."
-            } else {
-                errorMessage = "Could not load restaurants: \(error.localizedDescription)"
-            }
-            
-            showError = true
-            isLoading = false
-            
-            // Don't clear existing data on error
-            print("✅ Keeping existing data after error: \(previousRestaurants.count) restaurants")
-        }
+
     }
     
     // Extract unique cuisines from restaurants
@@ -379,7 +361,7 @@ class HomeViewModel: ObservableObject {
         }
         
         // Store current data for possible rollback
-        let previousTopPicks = await MainActor.run { self.topPicks }
+        // let previousTopPicks = await MainActor.run { self.topPicks }
         
         let isAlreadyLoading = await MainActor.run {
             let currentlyLoading = isLoadingTopPicks
@@ -395,8 +377,8 @@ class HomeViewModel: ObservableObject {
             return
         }
         
-        do {
-            print("📡 HomeViewModel: Fetching top picks from network")
+        // Fetch top picks with retry logic
+        print("📡 HomeViewModel: Fetching top picks from network")
             
             // Try with retries for reliability
             var retryCount = 0
@@ -433,23 +415,26 @@ class HomeViewModel: ObservableObject {
                 }
             }
             
-            // Prefetch restaurant details for top picks to avoid redundant calls
-            if !fetchedTopPicks.isEmpty {
+            let topPicksForPrefetch = fetchedTopPicks
+            if !topPicksForPrefetch.isEmpty {
                 Task {
-                    await prefetchRestaurantDetails(for: fetchedTopPicks)
+                    await prefetchRestaurantDetails(for: topPicksForPrefetch)
                 }
             }
             
+            let finalTopPicks = fetchedTopPicks
+            let capturedLastError = lastError
+            
             await MainActor.run {
-                print("✅ HomeViewModel: Successfully loaded \(fetchedTopPicks.count) top picks")
+                print("✅ HomeViewModel: Successfully loaded \(finalTopPicks.count) top picks")
                 
                 // Check if we have data after retries
-                if !fetchedTopPicks.isEmpty {
+                if !finalTopPicks.isEmpty {
                     // Only update if we got non-empty results
-                    self.topPicks = fetchedTopPicks
+                    self.topPicks = finalTopPicks
                     lastTopPicksRefreshTime = now
-                    print("✅ Updated UI with new top picks data: \(fetchedTopPicks.count) items")
-                } else if let error = lastError {
+                    print("✅ Updated UI with new top picks data: \(finalTopPicks.count) items")
+                } else if let error = capturedLastError {
                     // We exhausted retries and still have an error - set error state instead of throwing
                     if error.localizedDescription.contains("offline") || 
                        error.localizedDescription.contains("network connection") ||
@@ -476,26 +461,7 @@ class HomeViewModel: ObservableObject {
                 isLoadingTopPicks = false
                 lastRefreshTime = Date()
             }
-        } catch {
-            print("❌ HomeViewModel: Error loading top picks: \(error.localizedDescription)")
-            
-            await MainActor.run {
-                // Only show error message if we don't have existing data
-                if topPicks.isEmpty {
-                    if error.localizedDescription.contains("offline") || 
-                       error.localizedDescription.contains("network connection") ||
-                       error.localizedDescription.contains("The Internet connection appears to be offline") {
-                        errorMessage = "No internet connection. Please check your connection and try again."
-                    } else {
-                        errorMessage = "Could not load top picks: \(error.localizedDescription)"
-                    }
-                    showError = true
-                } else {
-                    print("⚠️ HomeViewModel: Error refreshing, but keeping existing \(self.topPicks.count) top picks")
-                }
-                isLoadingTopPicks = false
-            }
-        }
+
     }
     
     // Helper method to find the restaurant a product belongs to
@@ -523,7 +489,7 @@ class HomeViewModel: ObservableObject {
             if !pendingRestaurantRequests.contains(restaurantId) {
                 let shouldFetch = await shouldFetchRestaurantDetails(forId: restaurantId)
                 if shouldFetch {
-                    await MainActor.run {
+                    _ = await MainActor.run {
                         // Add to pending requests on main thread to prevent race conditions
                         pendingRestaurantRequests.insert(restaurantId)
                     }
@@ -538,7 +504,7 @@ class HomeViewModel: ObservableObject {
                     } catch {
                         print("⚠️ Failed to fetch restaurant \(restaurantId): \(error.localizedDescription)")
                         // Make sure to always remove from pending on main thread
-                        await MainActor.run {
+                        _ = await MainActor.run {
                             pendingRestaurantRequests.remove(restaurantId)
                         }
                     }
@@ -772,10 +738,10 @@ struct HomeView: View {
                 object: nil
             )
         }
-        .onChange(of: selectedTab) { newTab in
+        .onChange(of: selectedTab) { oldValue, newTab in
             print("🔄 HomeView: Tab changed to: \(newTab)")
         }
-        .onChange(of: TabSelection.shared.selectedTab) { newTab in
+        .onChange(of: TabSelection.shared.selectedTab) { oldValue, newTab in
             print("🔄 HomeView: TabSelection.shared changed to: \(newTab)")
             
             // Ensure local state stays in sync with shared state
@@ -798,7 +764,7 @@ struct HomeView: View {
                 }
             }
         }
-        .onChange(of: showCartSheet) { newValue in
+        .onChange(of: showCartSheet) { oldValue, newValue in
             print("🛒 HomeView: Cart sheet state changed to: \(newValue)")
         }
         .alert(isPresented: $viewModel.showError) {
@@ -837,11 +803,10 @@ struct HomeView: View {
             print("🔄 Loading initial data")
             
             // Start loading both data types in parallel for faster initial load
-            async let topPicksTask = loadTopPicksData()
-            async let restaurantsTask = loadRestaurantsData()
-            
-            // Wait for both tasks to complete
-            _ = await (topPicksTask, restaurantsTask)
+            await withTaskGroup(of: Void.self) { group in
+                group.addTask { await self.loadTopPicksData() }
+                group.addTask { await self.loadRestaurantsData() }
+            }
             
             // Always reset the pulling state
             await MainActor.run {
@@ -936,7 +901,7 @@ struct HomeView: View {
                                 
                                 // Refresh data
                                 Task {
-                                    await loadData()
+                                    loadData()
                                 }
                             }
                     } else if geo.frame(in: .global).minY <= 0 {
@@ -1028,7 +993,7 @@ struct HomeView: View {
                             .font(.system(size: 12))
                             .foregroundColor(.black)
                             .focused($isSearchFieldFocused)
-                            .onChange(of: isSearchFieldFocused) { newValue in
+                            .onChange(of: isSearchFieldFocused) { oldValue, newValue in
                                 isSearching = newValue
                             }
                             
@@ -1107,7 +1072,7 @@ struct HomeView: View {
             }
             
             print("🔄 Native refreshable triggered")
-            await loadData()
+            loadData()
         }
         .safeAreaInset(edge: .top) {
             Color.clear.frame(height: 0)

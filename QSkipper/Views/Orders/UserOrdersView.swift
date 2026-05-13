@@ -41,7 +41,7 @@ struct UserOrdersView: View {
                         TextField("Search by restaurant or dish", text: $searchText)
                             .font(.system(size: 16))
                             .focused($isSearchFieldFocused)
-                            .onChange(of: isSearchFieldFocused) { newValue in
+                            .onChange(of: isSearchFieldFocused) { oldValue, newValue in
                                 isSearching = newValue
                             }
                         
@@ -110,7 +110,7 @@ struct UserOrdersView: View {
             .onAppear {
                 viewModel.fetchOrders()
             }
-            .onChange(of: tabSelection.selectedTab) { newTab in
+            .onChange(of: tabSelection.selectedTab) { oldValue, newTab in
                 if newTab == .orders {
                     print("📱 Orders tab selected, refreshing data")
                     viewModel.fetchOrders()

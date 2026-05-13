@@ -67,21 +67,20 @@ class UserOrdersViewModel: ObservableObject {
                     try await fetchAllRestaurants()
                 }
                 
-                // Now fetch the orders
-                let orders: [UserOrder]
+                let fetchedOrders: [UserOrder]
                 // --- Supabase path ---
                 if AuthManager.useSupabase {
-                    orders = try await SupabaseOrderService.shared.fetchUserOrders(userId: userId)
+                    fetchedOrders = try await SupabaseOrderService.shared.fetchUserOrders(userId: userId)
                 } else {
-                    orders = try await fetchUserOrdersAPI(userId: userId)
+                    fetchedOrders = try await fetchUserOrdersAPI(userId: userId)
                 }
                 
                 // Process orders on the main thread
                 await MainActor.run {
-                    self.orders = orders
+                    self.orders = fetchedOrders
                     self.isLoading = false
                     self.lastRefreshTime = Date()
-                    print("✅ Successfully loaded \(orders.count) orders")
+                    print("✅ Successfully loaded \(fetchedOrders.count) orders")
                 }
             } catch {
                 await MainActor.run {
@@ -137,8 +136,6 @@ class UserOrdersViewModel: ObservableObject {
         
         // Create a decoder with appropriate date decoding strategy
         let decoder = JSONDecoder()
-        let dateFormatter = ISO8601DateFormatter()
-        dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         
         decoder.dateDecodingStrategy = .custom { decoder in
             let container = try decoder.singleValueContainer()
@@ -146,8 +143,12 @@ class UserOrdersViewModel: ObservableObject {
             
             print("🕒 Attempting to parse date: \(dateString)")
             
+            // Create formatter inside the closure to avoid non-Sendable capture
+            let isoFormatter = ISO8601DateFormatter()
+            isoFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            
             // Try parsing with the ISO8601DateFormatter first
-            if let date = dateFormatter.date(from: dateString) {
+            if let date = isoFormatter.date(from: dateString) {
                 print("✅ Parsed date with ISO8601DateFormatter: \(date)")
                 return date
             }
@@ -226,7 +227,7 @@ class UserOrdersViewModel: ObservableObject {
                     productId: itemDto.productId,
                     name: itemDto.name,
                     quantity: itemDto.quantity,
-                    price: Double(itemDto.price) ?? 0.0
+                    price: itemDto.price
                 )
             }
             

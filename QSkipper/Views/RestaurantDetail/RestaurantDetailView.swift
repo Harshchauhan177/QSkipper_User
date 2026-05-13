@@ -69,7 +69,7 @@ struct RestaurantDetailView: View {
             print("🖥️ RestaurantDetailView disappeared")
             // Clear cache when view disappears to prevent memory issues
             // We'll leave the cache for this specific restaurant but clear others
-            let currentRestaurantId = restaurant.id
+            let _ = restaurant.id
             Task {
                 await MainActor.run {
                     // Clear all product cache except for the current restaurant

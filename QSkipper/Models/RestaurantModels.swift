@@ -260,13 +260,13 @@ struct Product: Identifiable, Codable, Equatable {
                 // This allows specific products to work even with API issues
                 if name.lowercased().contains("omelette") || name.lowercased().contains("omellete") {
                     print("🔧 Applying special fix for 'Omelette' product")
-                    if let chaiAddaId = decoder.codingPath.first(where: { $0.stringValue.contains("chai") || $0.stringValue.contains("adda") }) {
+                    if decoder.codingPath.first(where: { $0.stringValue.contains("chai") || $0.stringValue.contains("adda") }) != nil {
                         tempRestaurantId = "chai_adda_id"
                         print("   → Using Chai Adda ID: \(tempRestaurantId)")
                     }
                 } else if name.lowercased().contains("mixed softy") || name.lowercased().contains("softy") {
                     print("🔧 Applying special fix for 'Mixed Softy' product")
-                    if let dcSodaId = decoder.codingPath.first(where: { $0.stringValue.contains("dc") || $0.stringValue.contains("soda") }) {
+                    if decoder.codingPath.first(where: { $0.stringValue.contains("dc") || $0.stringValue.contains("soda") }) != nil {
                         tempRestaurantId = "dc_soda_id"
                         print("   → Using DC SODA ID: \(tempRestaurantId)")
                     }
@@ -397,8 +397,7 @@ struct ProductsResponse: Codable {
     init(from decoder: Decoder) throws {
         // Try multiple decoding approaches
         
-        do {
-            // APPROACH 1: Decode using standard key "products"
+        // APPROACH 1: Decode using standard key "products"
             let container = try? decoder.container(keyedBy: CodingKeys.self)
             if let container = container, let productArray = try? container.decode([Product].self, forKey: .products) {
                 products = productArray
@@ -463,10 +462,6 @@ struct ProductsResponse: Codable {
             print("⚠️ Failed to decode products using any known approach - returning empty array")
             products = []
             
-        } catch {
-            print("❌ Error in ProductsResponse decoder: \(error)")
-            products = [] // Fallback to empty array on error
-        }
     }
     
     // Dynamic key support for when we don't know the exact key structure

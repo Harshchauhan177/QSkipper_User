@@ -132,6 +132,22 @@ struct AboutView: View {
                             .cornerRadius(12)
                             .shadow(color: Color.black.opacity(0.05), radius: 5)
                             
+                            // MARK: - Current Developers Section
+                            VStack(alignment: .leading, spacing: 15) {
+                                Text("Current Developers")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundColor(.primary)
+                                
+                                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
+                                    TeamMemberView(name: "Anshu Nagar", role: "Developer", color: primaryColor, icon: "laptopcomputer")
+                                    TeamMemberView(name: "Harsh Kumar", role: "Developer", color: primaryColor, icon: "desktopcomputer")
+                                }
+                            }
+                            .padding()
+                            .background(Color.white)
+                            .cornerRadius(12)
+                            .shadow(color: Color.black.opacity(0.05), radius: 5)
+                            
                             // MARK: - Team/Developer Section
                             VStack(alignment: .leading, spacing: 15) {
                                 Text("Our Team")

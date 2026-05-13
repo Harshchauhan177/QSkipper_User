@@ -236,7 +236,7 @@ class APIClient {
                                 let timeSinceLastRequest = Date().timeIntervalSince(lastTime)
                                 let limitInterval = self.getRateLimitInterval(for: path)
                                 if timeSinceLastRequest < limitInterval {
-                                    let waitTime = limitInterval - timeSinceLastRequest
+                                    _ = limitInterval - timeSinceLastRequest
                                     print("⏱️ Rate limited for endpoint \(path). Last request: \(Int(timeSinceLastRequest))s ago, interval: \(Int(limitInterval))s")
                                     return true
                                 }
@@ -366,14 +366,14 @@ class APIClient {
             throw APIError.invalidURL
         }
         
-        // Use a placeholder image if in offline or error mode
-        let placeholderImage = UIImage(systemName: "photo.fill") ?? UIImage()
+        // Placeholder kept for potential offline mode
+        // let placeholderImage = UIImage(systemName: "photo.fill") ?? UIImage()
         
         // Check if this is a retry attempt for a failed image
         let isRetryAttempt = urlString.contains("retry=true")
         
         // Define a maximum number of retries and alternate servers
-        let maxRetries = 3
+        // let maxRetries = 3 // Retries handled by server rotation
         let alternateServers = [
             renderBaseURL.absoluteString,
             railwayBaseURL.absoluteString,
@@ -384,160 +384,111 @@ class APIClient {
         // List of errors that should trigger the fallback mechanism
         let retryableErrors: [Int] = [500, 502, 503, 504, 429]
         
-        // First try loading from the original URL
-        do {
-            // If the URL points to an external host (e.g. Supabase Storage),
-            // fetch it directly instead of rotating through old backend servers.
-            let isExternalURL: Bool = {
-                guard let host = url.host else { return false }
-                let knownHosts = alternateServers.compactMap { URL(string: $0)?.host }
-                return !knownHosts.contains(host)
-            }()
-            
-            if isExternalURL {
-                do {
-                    print("🔄 Loading image directly from external URL: \(urlString.prefix(80))...")
-                    let (data, response) = try await URLSession.shared.data(from: url)
-                    
-                    if let httpResponse = response as? HTTPURLResponse,
-                       (200...299).contains(httpResponse.statusCode),
-                       let image = UIImage(data: data) {
-                        imageCache.setImage(image, forKey: urlString)
-                        return image
-                    }
-                } catch {
-                    print("⚠️ External URL failed: \(error.localizedDescription)")
+        // If the URL points to an external host (e.g. Supabase Storage),
+        // fetch it directly instead of rotating through old backend servers.
+        let isExternalURL: Bool = {
+            guard let host = url.host else { return false }
+            let knownHosts = alternateServers.compactMap { URL(string: $0)?.host }
+            return !knownHosts.contains(host)
+        }()
+        
+        if isExternalURL {
+            do {
+                print("🔄 Loading image directly from external URL: \(urlString.prefix(80))...")
+                let (data, response) = try await URLSession.shared.data(from: url)
+                
+                if let httpResponse = response as? HTTPURLResponse,
+                   (200...299).contains(httpResponse.statusCode),
+                   let image = UIImage(data: data) {
+                    imageCache.setImage(image, forKey: urlString)
+                    return image
                 }
+            } catch {
+                print("⚠️ External URL failed: \(error.localizedDescription)")
             }
-            
-            // Loop through each server to try
-            for (index, serverBase) in alternateServers.enumerated() {
-                // Skip if this is a retry and we're on the first server (already tried)
-                if isRetryAttempt && index == 0 {
-                    continue
-                }
-                
-                // Extract the path from the original URL
-                let path = url.path
-                
-                // Create a new URL with the alternate server
-                let alternateUrlString: String
-                if path.hasPrefix("/get_product_photo/") || path.hasPrefix("/get_restaurant_photo/") {
-                    // Try reconstructing the path with the ID as the key part
-                    let components = path.components(separatedBy: "/")
-                    if let idComponent = components.last, !idComponent.isEmpty {
-                        alternateUrlString = "\(serverBase)\(path)"
-                    } else {
-                        continue // Skip this server if we can't extract the ID
-                    }
-                } else {
-                    // Just use the original path with the new server
-                    alternateUrlString = "\(serverBase)\(path)"
-                }
-                
-                guard let alternateUrl = URL(string: alternateUrlString) else {
-                    continue // Skip if URL is invalid
-                }
-                
-                // Attempt to load from this server
-                do {
-                    print("🔄 Trying image from server \(index+1)/\(alternateServers.count): \(alternateUrlString)")
-                    
-                    let (data, response) = try await URLSession.shared.data(from: alternateUrl)
-                    
-                    guard let httpResponse = response as? HTTPURLResponse else {
-                        continue // Try next server if not an HTTP response
-                    }
-                    
-                    // If we got a success response (200-299)
-                    if (200...299).contains(httpResponse.statusCode) {
-                        guard let image = UIImage(data: data) else {
-                            continue // Try next server if data isn't an image
-                        }
-                        
-                                                    // Cache the image with original key
-                            imageCache.setImage(image, forKey: urlString)
-                            
-                            return image
-                    } 
-                    // If we got an error that's retryable, continue to the next server
-                    else if retryableErrors.contains(httpResponse.statusCode) {
-                        print("⚠️ Server \(index+1) returned status \(httpResponse.statusCode), trying next server")
-                        continue
-                    } 
-                    // For other errors, throw
-                    else {
-                        throw APIError.serverError(httpResponse.statusCode, data)
-                    }
-                } catch {
-                    // Try the next server on error
-                    print("⚠️ Error loading from server \(index+1): \(error.localizedDescription)")
-                    continue
-                }
-            }
-            
-            // If we reach here, we've tried all servers without success
-            // Create a placeholder image with the ID text
-            let finalRenderer = UIGraphicsImageRenderer(size: CGSize(width: 100, height: 100))
-            let finalImage = finalRenderer.image { ctx in
-                // Draw a gradient background
-                let colors = [UIColor.systemBlue.cgColor, UIColor.systemIndigo.cgColor]
-                let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors as CFArray, locations: [0.0, 1.0])!
-                ctx.cgContext.drawLinearGradient(gradient, 
-                                              start: CGPoint(x: 0, y: 0),
-                                              end: CGPoint(x: 100, y: 100),
-                                              options: [])
-                
-                // Extract the ID from the URL
-                let id = url.lastPathComponent
-                
-                // Draw text
-                let paragraphStyle = NSMutableParagraphStyle()
-                paragraphStyle.alignment = .center
-                
-                let attrs: [NSAttributedString.Key: Any] = [
-                    .font: UIFont.systemFont(ofSize: 12),
-                    .foregroundColor: UIColor.white,
-                    .paragraphStyle: paragraphStyle
-                ]
-                
-                // Draw "Image not found" text
-                let notFoundString = NSAttributedString(string: "Image not\navailable", attributes: attrs)
-                notFoundString.draw(in: CGRect(x: 10, y: 40, width: 80, height: 50))
-            }
-            
-                            // Cache this fallback image
-                imageCache.setImage(finalImage, forKey: urlString)
-                
-                return finalImage
-        } catch {
-            print("❌ All image loading attempts failed for \(urlString): \(error.localizedDescription)")
-            
-            // Create and return a fallback image 
-            let renderer = UIGraphicsImageRenderer(size: CGSize(width: 100, height: 100))
-            let fallbackImage = renderer.image { ctx in
-                UIColor.systemGray5.setFill()
-                ctx.fill(CGRect(x: 0, y: 0, width: 100, height: 100))
-                
-                // Draw a message about the error
-                let paragraphStyle = NSMutableParagraphStyle()
-                paragraphStyle.alignment = .center
-                
-                let attrs: [NSAttributedString.Key: Any] = [
-                    .font: UIFont.systemFont(ofSize: 10),
-                    .foregroundColor: UIColor.darkGray,
-                    .paragraphStyle: paragraphStyle
-                ]
-                
-                let message = NSAttributedString(string: "Image\nunavailable", attributes: attrs)
-                message.draw(in: CGRect(x: 10, y: 40, width: 80, height: 40))
-            }
-            
-                            // Cache this fallback image
-                imageCache.setImage(fallbackImage, forKey: urlString)
-                
-                return fallbackImage
         }
+        
+        // Loop through each server to try
+        for (index, serverBase) in alternateServers.enumerated() {
+            // Skip if this is a retry and we're on the first server (already tried)
+            if isRetryAttempt && index == 0 {
+                continue
+            }
+            
+            // Extract the path from the original URL
+            let path = url.path
+            
+            // Create a new URL with the alternate server
+            let alternateUrlString: String
+            if path.hasPrefix("/get_product_photo/") || path.hasPrefix("/get_restaurant_photo/") {
+                let components = path.components(separatedBy: "/")
+                if components.last != nil && !components.last!.isEmpty {
+                    alternateUrlString = "\(serverBase)\(path)"
+                } else {
+                    continue
+                }
+            } else {
+                alternateUrlString = "\(serverBase)\(path)"
+            }
+            
+            guard let alternateUrl = URL(string: alternateUrlString) else {
+                continue
+            }
+            
+            do {
+                print("🔄 Trying image from server \(index+1)/\(alternateServers.count): \(alternateUrlString)")
+                
+                let (data, response) = try await URLSession.shared.data(from: alternateUrl)
+                
+                guard let httpResponse = response as? HTTPURLResponse else {
+                    continue
+                }
+                
+                if (200...299).contains(httpResponse.statusCode) {
+                    guard let image = UIImage(data: data) else {
+                        continue
+                    }
+                    
+                    imageCache.setImage(image, forKey: urlString)
+                    return image
+                } else if retryableErrors.contains(httpResponse.statusCode) {
+                    print("⚠️ Server \(index+1) returned status \(httpResponse.statusCode), trying next server")
+                    continue
+                } else {
+                    throw APIError.serverError(httpResponse.statusCode, data)
+                }
+            } catch {
+                print("⚠️ Error loading from server \(index+1): \(error.localizedDescription)")
+                continue
+            }
+        }
+        
+        // If we reach here, we've tried all servers without success
+        // Create a placeholder image
+        let finalRenderer = UIGraphicsImageRenderer(size: CGSize(width: 100, height: 100))
+        let finalImage = finalRenderer.image { ctx in
+            let colors = [UIColor.systemBlue.cgColor, UIColor.systemIndigo.cgColor]
+            let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors as CFArray, locations: [0.0, 1.0])!
+            ctx.cgContext.drawLinearGradient(gradient, 
+                                          start: CGPoint(x: 0, y: 0),
+                                          end: CGPoint(x: 100, y: 100),
+                                          options: [])
+            
+            let paragraphStyle = NSMutableParagraphStyle()
+            paragraphStyle.alignment = .center
+            
+            let attrs: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 12),
+                .foregroundColor: UIColor.white,
+                .paragraphStyle: paragraphStyle
+            ]
+            
+            let notFoundString = NSAttributedString(string: "Image not\navailable", attributes: attrs)
+            notFoundString.draw(in: CGRect(x: 10, y: 40, width: 80, height: 50))
+        }
+        
+        imageCache.setImage(finalImage, forKey: urlString)
+        return finalImage
     }
     
     // MARK: - Convenience methods for common API endpoints

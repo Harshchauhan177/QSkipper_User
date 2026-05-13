@@ -115,7 +115,6 @@ class NetworkUtils {
             return cachedImage
         }
         
-        // Delegate to APIClient for image loading with user-initiated priority
         print("📡 NetworkUtils: Loading restaurant image for: \(photoId.prefix(80))...")
         
         do {

@@ -81,7 +81,7 @@ struct CartView: View {
                         .environmentObject(TabSelection.shared)
                     )
                     .transition(.opacity)
-                    .animation(.easeInOut)
+                    .animation(.easeInOut, value: controller.showOrderSuccess)
                     .hideTabBar(false)
             }
             
@@ -97,7 +97,7 @@ struct CartView: View {
                         .environmentObject(TabSelection.shared)
                     )
                     .transition(.opacity)
-                    .animation(.easeInOut)
+                    .animation(.easeInOut, value: controller.showOrderFail)
                     .hideTabBar(false)
             }
             
@@ -279,7 +279,7 @@ struct CartContentView: View {
                 }
             }
         }
-        .onChange(of: controller.showPaymentView) { newValue in
+        .onChange(of: controller.showPaymentView) { oldValue, newValue in
             print("🔄 showPaymentView changed to: \(newValue)")
             showPaymentView = newValue
             if newValue {
@@ -457,7 +457,7 @@ struct PickupOptionsView: View {
                 .frame(height: 50)
             }
             .toggleStyle(CustomToggleStyle())
-            .onChange(of: packMyOrder) { newValue in
+            .onChange(of: packMyOrder) { oldValue, newValue in
                 // Only update the controller's packMyOrder value
                 controller.packMyOrder = newValue
                 print("🛒 Pack my order changed to: \(newValue)")
@@ -748,7 +748,7 @@ struct SchedulePickerSheet: View {
                                 let currentHour = calendar.component(.hour, from: now)
                                 
                                 // Create a date for today but preserve the selected time
-                                var components = calendar.dateComponents([.year, .month, .day], from: now)
+                                // let components = calendar.dateComponents([.year, .month, .day], from: now)
                                 
                                 // If before 11 AM, set to first time slot
                                 if currentHour < 11 {

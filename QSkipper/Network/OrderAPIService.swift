@@ -138,13 +138,6 @@ class OrderAPIService {
             let statusCode = 500
             
             if case .serverError(let code, _) = error {
-                let response = HTTPURLResponse(
-                    url: ServerConfig.primaryURL(for: "/verify-order"),
-                    statusCode: code,
-                    httpVersion: "HTTP/1.1",
-                    headerFields: ["Content-Type": "application/json"]
-                )!
-                
                 throw NSError(
                     domain: "VerifyOrder",
                     code: code,

@@ -43,7 +43,7 @@ struct LocationView: View {
                     .frame(height: 300)
                     .cornerRadius(20)
                     .padding(.horizontal, 20)
-                    .onChange(of: locationManager.location) { newLocation in
+                    .onChange(of: locationManager.location) { oldValue, newLocation in
                         if let location = newLocation {
                             region.center = location.coordinate
                         }

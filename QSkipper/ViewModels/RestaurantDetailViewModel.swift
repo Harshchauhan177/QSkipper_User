@@ -156,11 +156,13 @@ class RestaurantDetailViewModel: ObservableObject {
                     }
                 }
                 
+                let finalProducts = fetchedProducts
+                
                 await MainActor.run {
-                    self.products = fetchedProducts
+                    self.products = finalProducts
                     
                     // Store in cache for future use
-                    self.productCache[restaurantId] = fetchedProducts
+                    self.productCache[restaurantId] = finalProducts
                     
                     self.extractCategories()
                     self.isLoading = false
@@ -177,8 +179,8 @@ class RestaurantDetailViewModel: ObservableObject {
                     print("📋 Categories: \(self.categories.joined(separator: ", "))")
                     
                     // Log price range
-                    if let minPrice = fetchedProducts.map({ $0.price }).min(),
-                       let maxPrice = fetchedProducts.map({ $0.price }).max() {
+                    if let minPrice = finalProducts.map({ $0.price }).min(),
+                       let maxPrice = finalProducts.map({ $0.price }).max() {
                         print("💰 Price range: ₹\(String(format: "%.2f", minPrice)) - ₹\(String(format: "%.2f", maxPrice))")
                     }
                 }
