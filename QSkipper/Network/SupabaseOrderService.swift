@@ -104,6 +104,29 @@ class SupabaseOrderService {
         print("✅ SupabaseOrderService: Order \(orderId) cancelled")
     }
 
+    // MARK: - Blocked User Check
+
+    /// Check if a user has been blocked (e.g. for fraud).
+    /// Returns `true` if the user is blocked.
+    func checkIfUserBlocked(userId: String) async throws -> Bool {
+        struct BlockedRow: Decodable {
+            let id: String
+        }
+        let rows: [BlockedRow] = try await supabaseClient
+            .from("blocked_users")
+            .select("id")
+            .eq("user_id", value: userId)
+            .limit(1)
+            .execute()
+            .value
+        
+        let isBlocked = !rows.isEmpty
+        if isBlocked {
+            print("🚫 SupabaseOrderService: User \(userId) is BLOCKED")
+        }
+        return isBlocked
+    }
+
     // MARK: - Get User Orders (direct PostgREST query)
     // Replaces: GET /get-user-orders/:userId
 

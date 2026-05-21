@@ -286,6 +286,11 @@ struct CartContentView: View {
                 print("🎯 Attempting to navigate with orderRequest: \(String(describing: controller.currentOrderRequest))")
             }
         }
+        .alert("Account Suspended", isPresented: $controller.showBlockedAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text("Your account has been suspended. Please contact support.")
+        }
     }
 }
 // MARK: - Empty Cart View

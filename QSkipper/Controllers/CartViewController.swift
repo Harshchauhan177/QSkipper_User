@@ -16,6 +16,8 @@ class CartViewController: ObservableObject, RazorpayPaymentCompletionProtocol {
     @Published var showOrderSuccess = false
     @Published var showOrderFail = false
     @Published var showPaymentView = false
+    @Published var isUserBlocked = false
+    @Published var showBlockedAlert = false
     @Published var isSchedulingOrder = false
     @Published var scheduledDate = Date().addingTimeInterval(3600)
     @Published var showSchedulePicker = false
@@ -140,6 +142,23 @@ class CartViewController: ObservableObject, RazorpayPaymentCompletionProtocol {
             // Supabase uses lowercase UUIDs; UserDefaults may have uppercase from Swift's uuidString
             let userId = AuthManager.useSupabase ? rawUserId.lowercased() : rawUserId
             print("✅ CartViewController: User ID found: \(userId)")
+            
+            // Check if user is blocked (Supabase path only)
+            if AuthManager.useSupabase {
+                do {
+                    let blocked = try await SupabaseOrderService.shared.checkIfUserBlocked(userId: userId)
+                    if blocked {
+                        print("🚫 CartViewController: User is blocked — cannot place order")
+                        self.isUserBlocked = true
+                        self.showBlockedAlert = true
+                        self.isProcessing = false
+                        return
+                    }
+                } catch {
+                    print("⚠️ CartViewController: Could not check block status: \(error.localizedDescription)")
+                    // Don't block the order if the check itself fails
+                }
+            }
             
             guard let firstItem = orderManager.currentCart.first else {
                 print("❌ CartViewController: Error: Cart is empty")

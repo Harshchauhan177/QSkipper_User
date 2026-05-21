@@ -576,16 +576,18 @@ struct OrderItemView: View {
     
     private func statusColor(for status: OrderStatus) -> Color {
         switch status {
-        case .pending:
+        case .pending, .placed:
             return Color.orange
-        case .preparing:
-            return Color.blue
+        case .processing, .preparing:
+            return Color.purple
         case .readyForPickup:
             return AppColors.primaryGreen
         case .completed:
             return AppColors.primaryGreen
-        case .cancelled:
+        case .cancelled, .rejected, .fraud:
             return AppColors.errorRed
+        case .scheduled:
+            return AppColors.primaryGreen
         }
     }
     
@@ -907,31 +909,39 @@ struct OrderDetailView: View {
     
     private func statusIcon(for status: OrderStatus) -> String {
         switch status {
-        case .pending:
+        case .pending, .placed:
             return "clock"
+        case .processing:
+            return "checkmark.circle"
         case .preparing:
             return "flame"
         case .readyForPickup:
             return "bag.fill"
         case .completed:
             return "checkmark.circle"
-        case .cancelled:
+        case .cancelled, .fraud:
             return "xmark.circle"
+        case .rejected:
+            return "xmark.circle"
+        case .scheduled:
+            return "calendar.badge.clock"
         }
     }
     
     private func statusColor(for status: OrderStatus) -> Color {
         switch status {
-        case .pending:
+        case .pending, .placed:
             return Color.orange
-        case .preparing:
-            return Color.blue
+        case .processing, .preparing:
+            return Color.purple
         case .readyForPickup:
             return AppColors.primaryGreen
         case .completed:
             return AppColors.primaryGreen
-        case .cancelled:
+        case .cancelled, .rejected, .fraud:
             return AppColors.errorRed
+        case .scheduled:
+            return AppColors.primaryGreen
         }
     }
     

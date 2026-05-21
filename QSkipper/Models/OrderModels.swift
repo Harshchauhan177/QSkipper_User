@@ -23,15 +23,22 @@ enum OrderType: String, Codable {
 
 enum OrderStatus: String, Codable {
     case pending = "pending"
+    case placed = "placed"
+    case processing = "processing"
     case preparing = "preparing"
     case readyForPickup = "ready_for_pickup"
     case completed = "completed"
     case cancelled = "cancelled"
+    case rejected = "rejected"
+    case fraud = "fraud"
+    case scheduled = "scheduled"
     
     var displayName: String {
         switch self {
-        case .pending:
-            return "Pending"
+        case .pending, .placed:
+            return "Waiting for Acceptance"
+        case .processing:
+            return "Accepted"
         case .preparing:
             return "Preparing"
         case .readyForPickup:
@@ -40,6 +47,12 @@ enum OrderStatus: String, Codable {
             return "Completed"
         case .cancelled:
             return "Cancelled"
+        case .rejected:
+            return "Rejected"
+        case .fraud:
+            return "Cancelled"
+        case .scheduled:
+            return "Scheduled"
         }
     }
 }

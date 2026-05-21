@@ -282,6 +282,10 @@ struct OrderCard: View {
             // Order details
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
+                    Text("Order #\(order.id.suffix(6))")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundColor(.gray)
+                    
                     Spacer()
                     
                     Text("₹\(order.totalAmount)")
@@ -318,18 +322,22 @@ struct OrderCard: View {
                     
                     // Delivery status button
                     if !isCurrentlyDelivering(order: order) {
-                        if order.status.lowercased() == "placed" {
-                            Button {
-                                // Action for "Preparing" status
-                            } label: {
-                                Text("Preparing")
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(AppColors.primaryGreen)
-                                    .cornerRadius(16)
-                            }
+                        if order.status.lowercased() == "placed" || order.status.lowercased() == "pending" {
+                            Text("Waiting")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.orange)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color.orange.opacity(0.1))
+                                .cornerRadius(16)
+                        } else if order.status.lowercased() == "processing" || order.status.lowercased() == "preparing" {
+                            Text("Preparing")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color.purple)
+                                .cornerRadius(16)
                         } else if order.status.lowercased() == "completed" {
                             Button {
                                 // Add the items from this order to the cart
@@ -371,6 +379,14 @@ struct OrderCard: View {
                                         .cornerRadius(16)
                                 }
                             }
+                        } else if order.status.lowercased() == "rejected" || order.status.lowercased() == "fraud" {
+                            Text(order.status.lowercased() == "rejected" ? "Rejected" : "Cancelled")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color.red)
+                                .cornerRadius(16)
                         } else {
                             Button {
                                 // No action - just a status indicator
@@ -467,16 +483,22 @@ struct OrderCard: View {
     
     private func getOrderStatusIcon(for status: String) -> String {
         switch status.lowercased() {
-        case "pending":
+        case "pending", "placed":
             return "clock"
+        case "processing":
+            return "checkmark.circle"
         case "preparing":
             return "flame"
         case "ready", "ready_for_pickup":
             return "checkmark.circle"
         case "completed":
             return "bag.fill"
-        case "cancelled":
+        case "cancelled", "fraud":
             return "xmark.circle"
+        case "rejected":
+            return "xmark.circle"
+        case "scheduled":
+            return "calendar.badge.clock"
         default:
             return order.takeAway ? "" : "takeoutbag.and.cup.and.straw.fill"
         }
@@ -484,16 +506,18 @@ struct OrderCard: View {
     
     private func getOrderStatusColor(for status: String) -> Color {
         switch status.lowercased() {
-        case "pending":
+        case "pending", "placed":
             return .orange
-        case "preparing":
-            return .blue
+        case "processing", "preparing":
+            return .purple
         case "ready", "ready_for_pickup":
             return .green
         case "completed":
             return AppColors.primaryGreen
-        case "cancelled":
+        case "cancelled", "rejected", "fraud":
             return .red
+        case "scheduled":
+            return AppColors.primaryGreen
         default:
             return order.takeAway ? .orange : .blue
         }
@@ -501,19 +525,23 @@ struct OrderCard: View {
     
     private func getOrderStatusText(for status: String) -> String {
         switch status.lowercased() {
-        case "pending":
-            return "Pending"
+        case "pending", "placed":
+            return "Waiting for acceptance"
+        case "processing":
+            return "Accepted"
         case "preparing":
             return "Preparing"
-        case "placed":
-            return "Placed"
-        case "schedule":
+        case "schedule", "scheduled":
             return "Scheduled"
         case "ready", "ready_for_pickup":
             return "Ready for pickup"
         case "completed":
             return "Completed"
         case "cancelled":
+            return "Cancelled"
+        case "rejected":
+            return "Rejected by restaurant"
+        case "fraud":
             return "Cancelled"
         default:
             return "Processing"

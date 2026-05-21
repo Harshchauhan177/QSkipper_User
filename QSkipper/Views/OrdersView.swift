@@ -82,16 +82,18 @@ struct OrderRow: View {
     
     private var statusColor: Color {
         switch order.status {
-        case .pending:
+        case .pending, .placed:
             return .orange
-        case .preparing:
-            return .yellow
+        case .processing, .preparing:
+            return .purple
         case .readyForPickup:
             return .blue
         case .completed:
             return .green
-        case .cancelled:
+        case .cancelled, .rejected, .fraud:
             return .red
+        case .scheduled:
+            return .green
         }
     }
 }

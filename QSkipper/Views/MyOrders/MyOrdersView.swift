@@ -299,16 +299,18 @@ struct OrderItemCard: View {
     // Get status color
     private func statusColor(for status: OrderStatus) -> Color {
         switch status {
-        case .pending:
+        case .pending, .placed:
             return Color.orange
-        case .preparing:
-            return Color.blue
+        case .processing, .preparing:
+            return Color.purple
         case .readyForPickup:
             return Color.purple
         case .completed:
             return AppColors.primaryGreen
-        case .cancelled:
+        case .cancelled, .rejected, .fraud:
             return Color.red
+        case .scheduled:
+            return AppColors.primaryGreen
         }
     }
 }
