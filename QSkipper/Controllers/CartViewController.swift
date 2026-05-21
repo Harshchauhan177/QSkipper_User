@@ -346,11 +346,13 @@ class CartViewController: ObservableObject, RazorpayPaymentCompletionProtocol {
     }
     
     func getConvenienceFee() -> Double {
-        return orderManager.getCartTotal() * 0.04
+        // return orderManager.getCartTotal() * 0.04 // 4% convenience fee - re-enable when needed
+        return 0
     }
     
     func getTotalAmount() -> Double {
-        return orderManager.getCartTotal() * (1 + 0.04)
+        // return orderManager.getCartTotal() * (1 + 0.04) // includes 4% convenience fee - re-enable when needed
+        return orderManager.getCartTotal()
     }
     
     // MARK: - Razorpay Payment Completion Protocol

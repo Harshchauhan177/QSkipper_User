@@ -114,7 +114,7 @@ class SupabaseOrderService {
             .from("orders")
             .select("""
                 id, restaurant_id, user_id, total_amount, status,
-                cook_time, take_away, schedule_date, order_time,
+                cook_time, take_away, schedule_date, order_time, rating,
                 restaurants ( name, location ),
                 order_items ( id, product_id, name, quantity, price )
             """)
@@ -125,6 +125,44 @@ class SupabaseOrderService {
 
         print("✅ SupabaseOrderService: Fetched \(rows.count) orders for user \(userId)")
         return rows.map { $0.toUserOrder() }
+    }
+
+    // MARK: - Submit Rating (direct PostgREST update on orders table)
+
+    /// Submit a rating (1–5) for a completed order.
+    func submitRating(orderId: String, rating: Int) async throws {
+        struct RatingUpdate: Encodable {
+            let rating: Int
+        }
+        struct RatingRow: Decodable {
+            let rating: Int?
+        }
+        
+        // Perform the update
+        try await supabaseClient
+            .from("orders")
+            .update(RatingUpdate(rating: rating))
+            .eq("id", value: orderId)
+            .execute()
+        
+        // Verify the update actually persisted (RLS can silently block writes)
+        let rows: [RatingRow] = try await supabaseClient
+            .from("orders")
+            .select("rating")
+            .eq("id", value: orderId)
+            .execute()
+            .value
+        
+        guard let saved = rows.first?.rating, saved == rating else {
+            print("❌ SupabaseOrderService: Rating update was silently blocked (likely RLS policy missing)")
+            throw NSError(
+                domain: "SupabaseOrderService",
+                code: 403,
+                userInfo: [NSLocalizedDescriptionKey: "Rating could not be saved. Please check database permissions."]
+            )
+        }
+        
+        print("✅ SupabaseOrderService: Submitted and verified rating \(rating) for order \(orderId)")
     }
 
     // MARK: - Get Order Status (direct PostgREST query)
@@ -242,6 +280,7 @@ private struct SBOrderRow: Codable {
     let take_away:       Bool?
     let schedule_date:   String?
     let order_time:      String?
+    let rating:          Int?
 
     // Joined from `restaurants`
     struct RestaurantJoin: Codable {
@@ -298,7 +337,7 @@ private struct SBOrderRow: Codable {
             scheduleDate:       schedDate,
             restaurantName:     restaurants?.name ?? "Restaurant",
             restaurantLocation: restaurants?.location ?? "Unknown location",
-            rating:             nil
+            rating:             rating
         )
     }
 

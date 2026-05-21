@@ -594,15 +594,16 @@ struct BillDetailsView: View {
                 
                 // Convenience fee
                 HStack {
-                    Text("Convenience Fee (4%)")
+                    // Text("Convenience Fee (4%)") // Original label - re-enable when needed
+                    Text("Convenience Fee")
                         .font(.system(size: 14))
                         .foregroundColor(AppColors.darkGray)
                     
                     Spacer()
                     
-                    Text("₹\(String(format: "%.2f", controller.getConvenienceFee()))")
-                        .font(.system(size: 14))
-                        .foregroundColor(AppColors.darkGray)
+                    Text("Free")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundColor(AppColors.primaryGreen)
                 }
                 
                 Divider()

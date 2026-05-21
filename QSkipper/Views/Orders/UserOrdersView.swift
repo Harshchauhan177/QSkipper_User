@@ -215,12 +215,17 @@ struct EmptyOrdersView: View {
 }
 
 struct OrderCard: View {
-    let order: UserOrder
+    var order: UserOrder
     @State private var isDelivering = false
     @EnvironmentObject private var tabSelection: TabSelection
     @State private var isReordering = false
     @State private var showToast = false
     @State private var toastMessage = ""
+    @State private var showRatingSheet = false
+    @State private var selectedRating: Int = 0
+    @State private var isSubmittingRating = false
+    @State private var localRating: Int? = nil
+    var onRatingSubmitted: ((String, Int) -> Void)? = nil
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -350,6 +355,22 @@ struct OrderCard: View {
                                 }
                             }
                             .disabled(isReordering)
+                            
+                            // Rate button for completed & unrated orders
+                            if (localRating ?? order.rating) == nil {
+                                Button {
+                                    selectedRating = 0
+                                    showRatingSheet = true
+                                } label: {
+                                    Text("Rate")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(AppColors.primaryGreen)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(AppColors.primaryGreen.opacity(0.1))
+                                        .cornerRadius(16)
+                                }
+                            }
                         } else {
                             Button {
                                 // No action - just a status indicator
@@ -370,7 +391,7 @@ struct OrderCard: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             
-            if let rating = order.rating, rating > 0 {
+            if let rating = localRating ?? order.rating, rating > 0 {
                 Divider()
                 
                 // Rating section if available
@@ -379,25 +400,13 @@ struct OrderCard: View {
                         .font(.system(size: 14))
                         .foregroundColor(.gray)
                     
-                    Image(systemName: "star.fill")
-                        .foregroundColor(.yellow)
-                        .font(.system(size: 14))
+                    ForEach(1...5, id: \.self) { star in
+                        Image(systemName: star <= rating ? "star.fill" : "star")
+                            .foregroundColor(.yellow)
+                            .font(.system(size: 12))
+                    }
                     
                     Spacer()
-                    
-                    Button {
-                        // View feedback action
-                    } label: {
-                        HStack {
-                            Text("View your feedback")
-                                .font(.system(size: 14))
-                                .foregroundColor(AppColors.primaryGreen)
-                            
-                            Image(systemName: "chevron.right")
-                                .font(.system(size: 12))
-                                .foregroundColor(AppColors.primaryGreen)
-                        }
-                    }
                 }
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
@@ -406,6 +415,10 @@ struct OrderCard: View {
         .background(Color.white)
         .cornerRadius(12)
         .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+        .sheet(isPresented: $showRatingSheet) {
+            ratingSheetView
+                .presentationDetents([.height(300)])
+        }
         .overlay(
             // Toast notification
             VStack {
@@ -513,6 +526,91 @@ struct OrderCard: View {
         return false
     }
     
+    // MARK: - Rating Sheet View
+    private var ratingSheetView: some View {
+        VStack(spacing: 16) {
+            Text("Rate your order")
+                .font(.system(size: 20, weight: .bold))
+                .foregroundColor(AppColors.darkGray)
+                .padding(.top, 20)
+            
+            // Restaurant name + ordered items
+            VStack(spacing: 6) {
+                Text(order.restaurantName)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(AppColors.darkGray)
+                
+                ForEach(order.items) { item in
+                    Text("\(item.quantity) × \(item.name)")
+                        .font(.system(size: 14))
+                        .foregroundColor(.gray)
+                }
+            }
+            
+            // Star picker
+            HStack(spacing: 12) {
+                ForEach(1...5, id: \.self) { star in
+                    Image(systemName: star <= selectedRating ? "star.fill" : "star")
+                        .font(.system(size: 36))
+                        .foregroundColor(star <= selectedRating ? .yellow : .gray.opacity(0.4))
+                        .onTapGesture {
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                selectedRating = star
+                            }
+                        }
+                }
+            }
+            .padding(.vertical, 10)
+            
+            // Submit button
+            Button {
+                guard selectedRating > 0 else { return }
+                isSubmittingRating = true
+                Task {
+                    do {
+                        try await SupabaseOrderService.shared.submitRating(orderId: order.id, rating: selectedRating)
+                        await MainActor.run {
+                            localRating = selectedRating
+                            onRatingSubmitted?(order.id, selectedRating)
+                            isSubmittingRating = false
+                            showRatingSheet = false
+                            toastMessage = "Thanks for your rating!"
+                            withAnimation { showToast = true }
+                        }
+                    } catch {
+                        await MainActor.run {
+                            isSubmittingRating = false
+                            toastMessage = "Failed to submit rating"
+                            withAnimation { showToast = true }
+                        }
+                        print("❌ Rating submission failed: \(error.localizedDescription)")
+                    }
+                }
+            } label: {
+                if isSubmittingRating {
+                    ProgressView()
+                        .tint(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(AppColors.primaryGreen)
+                        .cornerRadius(12)
+                } else {
+                    Text("Submit Rating")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(selectedRating > 0 ? AppColors.primaryGreen : Color.gray.opacity(0.4))
+                        .cornerRadius(12)
+                }
+            }
+            .disabled(selectedRating == 0 || isSubmittingRating)
+            .padding(.horizontal, 30)
+            
+            Spacer()
+        }
+    }
+    
     // Reorder functionality
     private func reorderItems() {
         // Clear existing cart items first
@@ -521,8 +619,13 @@ struct OrderCard: View {
         // For each item in the order, try to find the product and add it to cart
         Task {
             do {
-                // Fetch all products for this restaurant
-                let products = try await NetworkUtils.shared.fetchProducts(for: order.restaurantId)
+                // Fetch all products for this restaurant using the correct backend
+                let products: [Product]
+                if AuthManager.useSupabase {
+                    products = try await SupabaseRestaurantService.shared.fetchProducts(for: order.restaurantId)
+                } else {
+                    products = try await NetworkUtils.shared.fetchProducts(for: order.restaurantId)
+                }
                 
                 // Process each order item
                 for item in order.items {
@@ -607,7 +710,7 @@ struct UserOrder: Identifiable {
     let scheduleDate: Date?
     var restaurantName: String
     var restaurantLocation: String
-    let rating: Int?
+    var rating: Int?
 }
 
 #Preview {

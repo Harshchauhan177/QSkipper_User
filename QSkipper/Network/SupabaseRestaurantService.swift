@@ -69,6 +69,7 @@ class SupabaseRestaurantService {
     // MARK: - Top Picks (replaces GET /top-picks)
 
     /// Fetch top-pick products across all restaurants.
+    /// Products must have `top_picks = true` in the Supabase `products` table.
     func fetchTopPicks() async throws -> [Product] {
         let rows: [SBProductRow] = try await supabaseClient
             .from("products")
