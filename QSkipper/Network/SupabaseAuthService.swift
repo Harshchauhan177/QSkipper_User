@@ -75,13 +75,22 @@ class SupabaseAuthService: ObservableObject {
         }
     }
 
-    // MARK: - Login (replaces POST /login + POST /verify-login)
+    // Apple App Review bypass account
+    private let reviewEmail = "cangujjar@gmail.com"
+    private let reviewOTP   = "101101"
 
     /// Step 1: Request login OTP.
     func requestLoginOTP(email: String) async throws {
         isLoading = true
         error = nil
         defer { isLoading = false }
+
+        // Bypass for Apple App Review account — skip the actual API call
+        // to avoid Supabase rate-limiting during review.
+        if email.lowercased() == reviewEmail {
+            print("✅ SupabaseAuth: [Review Bypass] Skipping OTP request for review account")
+            return
+        }
 
         do {
             try await supabaseClient.auth.signInWithOTP(email: email)
@@ -98,6 +107,27 @@ class SupabaseAuthService: ObservableObject {
         isLoading = true
         error = nil
         defer { isLoading = false }
+
+        // Bypass for Apple App Review account — use password auth instead of OTP.
+        if email.lowercased() == reviewEmail {
+            guard otp == reviewOTP else {
+                let msg = "Invalid verification code"
+                self.error = msg
+                print("❌ SupabaseAuth: [Review Bypass] Wrong OTP entered")
+                throw NSError(domain: "SupabaseAuth", code: 401, userInfo: [NSLocalizedDescriptionKey: msg])
+            }
+            do {
+                try await supabaseClient.auth.signIn(email: email, password: otp)
+                await syncUserToDefaults()
+                isLoggedIn = true
+                print("✅ SupabaseAuth: [Review Bypass] Login verified for review account")
+                return true
+            } catch {
+                self.error = error.localizedDescription
+                print("❌ SupabaseAuth: [Review Bypass] signInWithPassword failed — \(error)")
+                throw error
+            }
+        }
 
         do {
             try await supabaseClient.auth.verifyOTP(
