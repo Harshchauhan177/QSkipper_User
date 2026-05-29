@@ -76,7 +76,10 @@ struct CartView: View {
                     .overlay(
                         OrderSuccessView(
                             cartManager: orderManager,
-                            orderId: controller.orderId
+                            orderId: controller.orderId,
+                            onDismiss: {
+                                presentationMode.wrappedValue.dismiss()
+                            }
                         )
                         .environmentObject(TabSelection.shared)
                     )
