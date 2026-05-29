@@ -11,36 +11,81 @@ struct ProfileView: View {
     @StateObject private var authManager = AuthManager.shared
     @State private var showLogoutConfirmation = false
     
+    // MARK: - Delete Account State
+    @State private var showDeleteAccountConfirmation = false
+    @State private var isDeletingAccount = false
+    @State private var deleteAccountError: String? = nil
+    @State private var showDeleteError = false
+    
     var body: some View {
-        ScrollView {
-            profileContent
-        }
-        .background(Color.gray.opacity(0.05))
-        .edgesIgnoringSafeArea(.bottom)
-        .alert("Logout", isPresented: $showLogoutConfirmation) {
-            Button("Cancel", role: .cancel) { }
-            Button("Logout", role: .destructive) {
-                authManager.logout()
+        ZStack {
+            ScrollView {
+                profileContent
             }
-        } message: {
-            Text("Are you sure you want to logout?")
-        }
-        .onAppear {
-            // Get user information
-            let userName = authManager.getCurrentUserName()
-            let userEmail = authManager.getCurrentUserEmail()
-            let userId = authManager.getCurrentUserId()
+            .background(Color.gray.opacity(0.05))
+            .edgesIgnoringSafeArea(.bottom)
+            .alert("Logout", isPresented: $showLogoutConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Logout", role: .destructive) {
+                    authManager.logout()
+                }
+            } message: {
+                Text("Are you sure you want to logout?")
+            }
+            // MARK: Delete Account Confirmation Alert
+            .alert("Delete Account", isPresented: $showDeleteAccountConfirmation) {
+                Button("Cancel", role: .cancel) { }
+                Button("Delete Permanently", role: .destructive) {
+                    Task {
+                        await deleteAccount()
+                    }
+                }
+            } message: {
+                Text("This action is permanent and cannot be undone. Your profile, order history, and all personal data will be permanently erased.")
+            }
+            // MARK: Delete Account Error Alert
+            .alert("Unable to Delete Account", isPresented: $showDeleteError) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(deleteAccountError ?? "An unexpected error occurred. Please try again later.")
+            }
+            .onAppear {
+                // Get user information
+                let userName = authManager.getCurrentUserName()
+                let userEmail = authManager.getCurrentUserEmail()
+                let userId = authManager.getCurrentUserId()
+                
+                print("👤 ProfileView.onAppear - User info:")
+                print("   - Name: \(userName ?? "nil")")
+                print("   - Email: \(userEmail ?? "nil")")
+                print("   - ID: \(userId ?? "nil")")
+            }
+            .safeAreaInset(edge: .top) {
+                Color.clear.frame(height: 0)
+            }
+            .safeAreaInset(edge: .bottom) {
+                Color.clear.frame(height: 1)
+            }
+            .disabled(isDeletingAccount)
             
-            print("👤 ProfileView.onAppear - User info:")
-            print("   - Name: \(userName ?? "nil")")
-            print("   - Email: \(userEmail ?? "nil")")
-            print("   - ID: \(userId ?? "nil")")
-        }
-        .safeAreaInset(edge: .top) {
-            Color.clear.frame(height: 0)
-        }
-        .safeAreaInset(edge: .bottom) {
-            Color.clear.frame(height: 1)
+            // MARK: Delete Account Loading Overlay
+            if isDeletingAccount {
+                Color.black.opacity(0.35)
+                    .ignoresSafeArea()
+                
+                VStack(spacing: 16) {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                        .scaleEffect(1.5)
+                    
+                    Text("Deleting account...")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(.white)
+                }
+                .padding(30)
+                .background(Color.black.opacity(0.7))
+                .cornerRadius(16)
+            }
         }
     }
     
@@ -50,6 +95,7 @@ struct ProfileView: View {
             profileHeader
             supportSection
             logoutButton
+            deleteAccountButton
             
             // Bottom spacer for tab bar
             Color.clear
@@ -203,6 +249,46 @@ struct ProfileView: View {
             )
             .padding(.horizontal, 20)
             .padding(.top, 30)
+        }
+    }
+    
+    // MARK: - Delete Account Button
+    private var deleteAccountButton: some View {
+        Button {
+            showDeleteAccountConfirmation = true
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "person.crop.circle.badge.minus")
+                    .font(.system(size: 16))
+                
+                Text("Delete Account")
+                    .font(.system(size: 16, weight: .medium))
+            }
+            .foregroundColor(.red)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 15)
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 10)
+    }
+    
+    // MARK: - Delete Account Action
+    private func deleteAccount() async {
+        isDeletingAccount = true
+        deleteAccountError = nil
+        
+        do {
+            try await AccountDeletionService.shared.deleteAccount()
+            // On success, SupabaseAuthService.logout() was called inside
+            // AccountDeletionService, which clears the session and UserDefaults.
+            // Now flip the AuthManager flag to trigger navigation back to StartView.
+            authManager.isLoggedIn = false
+            print("✅ ProfileView: Account deleted — routing to auth screen")
+        } catch {
+            isDeletingAccount = false
+            deleteAccountError = error.localizedDescription
+            showDeleteError = true
+            print("❌ ProfileView: Account deletion failed — \(error.localizedDescription)")
         }
     }
     
