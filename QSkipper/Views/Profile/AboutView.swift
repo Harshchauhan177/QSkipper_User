@@ -139,8 +139,12 @@ struct AboutView: View {
                                     .foregroundColor(.primary)
                                 
                                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                                    TeamMemberView(name: "Anshu Nagar", role: "Developer", color: primaryColor, icon: "laptopcomputer")
-                                    TeamMemberView(name: "Harsh Kumar", role: "Developer", color: primaryColor, icon: "desktopcomputer")
+                                    Link(destination: URL(string: "https://www.linkedin.com/in/anshu-nagar-2360a6266/")!) {
+                                        TeamMemberView(name: "Anshu Nagar", role: "Developer", color: primaryColor, icon: "laptopcomputer")
+                                    }
+                                    Link(destination: URL(string: "https://www.linkedin.com/in/harsh-kumar-550783270/")!) {
+                                        TeamMemberView(name: "Harsh Kumar", role: "Developer", color: primaryColor, icon: "desktopcomputer")
+                                    }
                                 }
                             }
                             .padding()
@@ -150,7 +154,7 @@ struct AboutView: View {
                             
                             // MARK: - Team/Developer Section
                             VStack(alignment: .leading, spacing: 15) {
-                                Text("Our Team")
+                                Text("Original Developers")
                                     .font(.system(size: 18, weight: .bold))
                                     .foregroundColor(.primary)
                                 
@@ -182,12 +186,17 @@ struct AboutView: View {
                                 
                                 Divider()
                                 
-                                HStack {
-                                    Image(systemName: "hand.raised")
-                                        .foregroundColor(primaryColor)
-                                    Text("Privacy Policy")
-                                        .foregroundColor(.primary)
-                                    Spacer()
+                                Link(destination: URL(string: "https://app.notion.com/p/QSkipper-Privacy-Policy-ffe4f3832a4e8301872281631b1102f8")!) {
+                                    HStack {
+                                        Image(systemName: "hand.raised")
+                                            .foregroundColor(primaryColor)
+                                        Text("Privacy Policy")
+                                            .foregroundColor(.primary)
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 14))
+                                            .foregroundColor(.gray)
+                                    }
                                 }
                                 
                                 Text("© 2025 QSkipper. All rights reserved.")

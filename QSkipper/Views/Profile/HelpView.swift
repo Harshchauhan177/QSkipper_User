@@ -88,11 +88,11 @@ struct HelpView: View {
                                     .multilineTextAlignment(.leading)
                                 
                                 // Email Button
-                                Link(destination: URL(string: "mailto:team.qskipper@gmail.com")!) {
+                                Link(destination: URL(string: "mailto:help.qskipper@gmail.com")!) {
                                     HStack {
                                         Image(systemName: "envelope.fill")
                                             .font(.system(size: 18))
-                                        Text("team.qskipper@gmail.com")
+                                        Text("help.qskipper@gmail.com")
                                             .font(.system(size: 16))
                                     }
                                     .foregroundColor(primaryColor)

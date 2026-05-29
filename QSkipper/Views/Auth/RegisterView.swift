@@ -227,18 +227,21 @@ struct RegisterView: View {
                             .foregroundColor(AppColors.primaryGreen)
                             .frame(width: 20, height: 20)
                         
-                        Group {
-                            Text("I Agree with ")
-                                .foregroundColor(.gray) +
-                            Text("Terms of Service")
-                                .foregroundColor(AppColors.primaryGreen) +
-                            Text(" and ")
-                                .foregroundColor(.gray) +
-                            Text("Privacy Policy")
-                                .foregroundColor(AppColors.primaryGreen)
+                        Text("I Agree with ")
+                            .foregroundColor(.gray) +
+                        Text("Terms of Service")
+                            .foregroundColor(AppColors.primaryGreen) +
+                        Text(" and ")
+                            .foregroundColor(.gray) +
+                        Text("Privacy Policy")
+                            .foregroundColor(AppColors.primaryGreen)
+                            .underline()
+                    }
+                    .font(.system(size: 14))
+                    .onTapGesture {
+                        if let url = URL(string: "https://app.notion.com/p/QSkipper-Privacy-Policy-ffe4f3832a4e8301872281631b1102f8") {
+                            UIApplication.shared.open(url)
                         }
-                        .font(.system(size: 14))
-                        .fixedSize(horizontal: false, vertical: true)
                     }
                     .padding(.top, 10)
                     .opacity(animateContent ? 1 : 0)
